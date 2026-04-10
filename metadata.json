@@ -1,0 +1,7 @@
+{
+  "name": "Hunter Growth OS",
+  "description": "A Solo Leveling inspired productivity and growth tracking system.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

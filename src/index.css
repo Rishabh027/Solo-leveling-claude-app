@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Rajdhani", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Share Tech Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Orbitron", sans-serif;
+
+  --color-bg: #050509;
+  --color-s1: #0a0a12;
+  --color-s2: #0f0f1c;
+  --color-s3: #141422;
+  --color-s4: #1a1a2e;
+  --color-b1: #1e1e35;
+  --color-b2: #252540;
+  --color-b3: #2d2d50;
+  
+  --color-hunter-blue: #4f8ef7;
+  --color-hunter-blue2: #2563eb;
+  --color-hunter-purple: #b06ef3;
+  --color-hunter-gold: #f5a623;
+  --color-hunter-cyan: #22d3ee;
+  --color-hunter-green: #10b981;
+  --color-hunter-red: #f43f5e;
+  --color-hunter-text: #e8eaf0;
+  --color-hunter-text2: #8892a4;
+  --color-hunter-text3: #3d4566;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
+    background: var(--color-bg);
+    color: var(--color-hunter-text);
+    font-family: var(--font-sans);
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(79, 142, 247, 0.07), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(176, 110, 243, 0.05), transparent);
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: linear-gradient(rgba(79, 142, 247, 0.025) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(79, 142, 247, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+}
+
+@layer components {
+  .hunter-card {
+    background: var(--color-s3);
+    border: 1px solid var(--color-b1);
+    border-radius: 14px;
+    padding: 13px;
+    margin-bottom: 8px;
+  }
+
+  .hunter-btn {
+    border: none;
+    border-radius: 9px;
+    padding: 10px 16px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    display: inline-block;
+    text-align: center;
+  }
+
+  .hunter-btn:active {
+    transform: scale(0.97);
+  }
+
+  .hunter-input {
+    background: var(--color-s1);
+    border: 1px solid var(--color-b2);
+    border-radius: 8px;
+    padding: 9px 11px;
+    color: var(--color-hunter-text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .hunter-input:focus {
+    border-color: var(--color-hunter-blue);
+  }
+
+  .hunter-badge {
+    display: inline-block;
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
