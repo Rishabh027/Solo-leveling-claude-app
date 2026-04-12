@@ -157,7 +157,8 @@ export const CAT_COLORS: Record<string, string> = {
   admin: '#f5a623',
   social: '#f43f5e',
   creative: '#e879f9',
-  rest: '#3d4566'
+  rest: '#3d4566',
+  chores: '#94a3b8'
 };
 
 export const CAT_LABELS: Record<string, string> = {
@@ -168,5 +169,6 @@ export const CAT_LABELS: Record<string, string> = {
   admin: 'Admin',
   social: 'Social',
   creative: 'Creative',
-  rest: 'Rest'
+  rest: 'Rest',
+  chores: 'Chores'
 };

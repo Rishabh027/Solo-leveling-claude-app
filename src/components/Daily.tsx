@@ -78,6 +78,7 @@ export const Daily = ({
                 <option value="social">🤝 Social & Network</option>
                 <option value="creative">🎨 Creative</option>
                 <option value="rest">😴 Rest & Recovery</option>
+                <option value="chores">🧹 Chores & Maintenance</option>
               </select>
             </div>
             <button 
