@@ -7,12 +7,19 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: './',
+    base: '/Solo-leveling-claude-app/',
     plugins: [
       react(),
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true
+        },
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
         manifest: {
           name: 'Hunter Growth OS',
@@ -22,8 +29,8 @@ export default defineConfig(({ mode }) => {
           background_color: '#050509',
           display: 'standalone',
           orientation: 'portrait',
-          scope: './',
-          start_url: './',
+          scope: '/Solo-leveling-claude-app/',
+          start_url: '/Solo-leveling-claude-app/',
           icons: [
             {
               src: 'https://images.weserv.nl/?url=https://images.alphacoders.com/134/1346297.png&w=192&h=192&fit=cover&mask=circle',
