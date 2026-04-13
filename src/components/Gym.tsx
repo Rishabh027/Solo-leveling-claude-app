@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Dumbbell, Trophy, History, X, LineChart as ChartIcon, TrendingUp } from 'lucide-react';
+import { Dumbbell, Trophy, History, X, LineChart as ChartIcon, TrendingUp, Edit2, Check, Footprints, User } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { GymLog, AppState } from '../types';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { GymLog, AppState, BodyweightLog, StepLog } from '../types';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface GymProps {
   state: AppState;
@@ -19,6 +19,13 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
   const [muscle, setMuscle] = useState('Chest');
   const [notes, setNotes] = useState('');
   const [sets, setSets] = useState([{ reps: 10, weight: 60 }]);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Bodyweight & Steps state
+  const [bwExercise, setBwExercise] = useState('Push Ups');
+  const [bwReps, setBwReps] = useState(10);
+  const [bwSets, setBwSets] = useState(3);
+  const [stepCount, setStepCount] = useState(10000);
 
   const addSet = () => setSets(prev => [...prev, { ...prev[prev.length - 1] }]);
   const removeSet = (idx: number) => setSets(prev => prev.filter((_, i) => i !== idx));
@@ -28,32 +35,117 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
 
   const logGym = () => {
     if (!exercise) return showToast('⚠ Enter exercise!', '#f43f5e');
-    const log: GymLog = {
-      id: Date.now(),
-      exercise,
-      muscle,
-      notes,
-      sets: [...sets],
-      date: new Date().toDateString(),
-      ts: Date.now()
-    };
-    setState(prev => ({ ...prev, gym: [...prev.gym, log] }));
+    
+    if (editingId) {
+      setState(prev => ({
+        ...prev,
+        gym: prev.gym.map(g => g.id === editingId ? { ...g, exercise, muscle, notes, sets: [...sets] } : g)
+      }));
+      setEditingId(null);
+      showToast('⚡ Log Updated');
+    } else {
+      const log: GymLog = {
+        id: Date.now(),
+        exercise,
+        muscle,
+        notes,
+        sets: [...sets],
+        date: new Date().toDateString(),
+        ts: Date.now()
+      };
+      setState(prev => ({ ...prev, gym: [...prev.gym, log] }));
+      gainXP(15, 25);
+      showToast('💪 +15 XP  +25 PTS');
+    }
+    
     setExercise('');
     setNotes('');
     setSets([{ reps: 10, weight: 60 }]);
-    gainXP(15, 25);
-    showToast('💪 +15 XP  +25 PTS');
   };
+
+  const editLog = (log: GymLog) => {
+    setEditingId(log.id);
+    setExercise(log.exercise);
+    setMuscle(log.muscle);
+    setNotes(log.notes);
+    setSets([...log.sets]);
+    setSubTab('log');
+  };
+
+  const logBodyweight = () => {
+    const log: BodyweightLog = {
+      id: Date.now(),
+      exercise: bwExercise,
+      reps: bwReps,
+      sets: bwSets,
+      date: new Date().toDateString(),
+      ts: Date.now()
+    };
+    setState(prev => ({ ...prev, bodyweight: [...(prev.bodyweight || []), log] }));
+    gainXP(10, 15);
+    showToast('🤸 Bodyweight Logged!');
+  };
+
+  const logSteps = () => {
+    const log: StepLog = {
+      id: Date.now(),
+      steps: stepCount,
+      date: new Date().toDateString(),
+      ts: Date.now()
+    };
+    setState(prev => ({ ...prev, steps: [...(prev.steps || []), log] }));
+    gainXP(10, 20);
+    showToast('👟 Steps Recorded!');
+  };
+
+  const [selectedMuscle, setSelectedMuscle] = useState('Chest');
+
+  // Grouped charts data
+  const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core'];
+  
+  const chartDataByMuscle = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    muscleGroups.forEach(m => {
+      const logs = state.gym
+        .filter(g => g.muscle === m)
+        .sort((a, b) => a.ts - b.ts);
+      
+      const dailyData: Record<string, number> = {};
+      logs.forEach(l => {
+        const date = l.date.split(' ').slice(1, 3).join(' ');
+        const vol = l.sets.reduce((acc, s) => acc + (s.weight * s.reps), 0);
+        dailyData[date] = (dailyData[date] || 0) + vol;
+      });
+
+      groups[m] = Object.entries(dailyData).map(([date, volume]) => ({ date, volume }));
+    });
+    return groups;
+  }, [state.gym]);
+
+  const exerciseCharts = useMemo(() => {
+    const exercises: Record<string, any[]> = {};
+    const logs = state.gym
+      .filter(g => g.muscle === selectedMuscle)
+      .sort((a, b) => a.ts - b.ts);
+    
+    logs.forEach(l => {
+      if (!exercises[l.exercise]) exercises[l.exercise] = [];
+      const date = l.date.split(' ').slice(1, 3).join(' ');
+      const maxWeight = Math.max(...l.sets.map(s => s.weight));
+      exercises[l.exercise].push({ date, weight: maxWeight });
+    });
+    return exercises;
+  }, [state.gym, selectedMuscle]);
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 bg-hunter-s1 border border-hunter-b1 rounded-xl p-1">
-        {['log', 'history', 'prs', 'stats'].map(t => (
+      <div className="flex gap-1 bg-hunter-s1 border border-hunter-b1 rounded-xl p-1 overflow-x-auto no-scrollbar">
+        {['log', 'bodyweight', 'history', 'prs', 'stats'].map(t => (
           <button
             key={t}
             onClick={() => setSubTab(t)}
             className={cn(
-              "flex-1 py-1.5 rounded-lg text-[10px] font-bold tracking-widest uppercase transition-all",
+              "flex-1 min-w-[80px] py-1.5 rounded-lg text-[10px] font-bold tracking-widest uppercase transition-all",
               subTab === t ? "bg-hunter-green text-black shadow-lg" : "text-hunter-text3 hover:text-hunter-text2"
             )}
           >
@@ -68,7 +160,9 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
             <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-xs font-black tracking-[4px] text-hunter-green uppercase">TRAINING CHAMBER</div>
+              <div className="text-xs font-black tracking-[4px] text-hunter-green uppercase">
+                {editingId ? 'RECALIBRATING LOG' : 'TRAINING CHAMBER'}
+              </div>
             </div>
           </div>
 
@@ -76,9 +170,11 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
             <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 mb-3 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <div className="w-[3px] h-[11px] bg-hunter-green rounded-[2px]" />
-                LOG EXERCISE
+                {editingId ? 'EDIT ENTRY' : 'LOG EXERCISE'}
               </div>
-              <div className="text-[8px] opacity-50">SYSTEM ID: {Date.now().toString().slice(-6)}</div>
+              {editingId && (
+                <button onClick={() => { setEditingId(null); setExercise(''); setSets([{reps:10, weight:60}]); }} className="text-hunter-red text-[8px] uppercase font-bold">Cancel Edit</button>
+              )}
             </div>
             <div className="space-y-4">
               <input 
@@ -124,44 +220,92 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
 
               <div className="grid grid-cols-2 gap-2">
                 <select className="hunter-input" value={muscle} onChange={e => setMuscle(e.target.value)}>
-                  <option>Chest</option><option>Back</option><option>Shoulders</option><option>Arms</option><option>Legs</option><option>Core</option><option>Full Body</option>
+                  {muscleGroups.map(m => <option key={m}>{m}</option>)}
+                  <option>Full Body</option>
                 </select>
                 <input type="text" className="hunter-input" placeholder="Notes" value={notes} onChange={e => setNotes(e.target.value)} />
               </div>
               <button className="hunter-btn bg-hunter-green text-black w-full shadow-lg font-black tracking-widest" onClick={logGym}>
-                EXECUTE LOG (+15 XP, +25 PTS)
+                {editingId ? 'UPDATE LOG' : 'EXECUTE LOG (+15 XP, +25 PTS)'}
               </button>
             </div>
           </div>
         </motion.div>
       )}
 
-      {subTab === 'history' && (
+      {subTab === 'bodyweight' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          {state.gym.length > 0 && (
-            <div className="hunter-card p-3 h-[150px] border-hunter-green/20">
-              <div className="text-[9px] text-hunter-text3 mb-2 uppercase tracking-widest flex items-center gap-2">
-                <TrendingUp size={10} className="text-hunter-green" />
-                DAILY VOLUME (KG)
+          <div className="hunter-card p-4 border-hunter-cyan/30">
+            <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 mb-3 flex items-center gap-1.5">
+              <User size={12} className="text-hunter-cyan" />
+              BODYWEIGHT CALISTHENICS
+            </div>
+            <div className="space-y-3">
+              <select className="hunter-input" value={bwExercise} onChange={e => setBwExercise(e.target.value)}>
+                <option>Push Ups</option><option>Pull Ups</option><option>Crunches</option><option>Squats</option><option>Plank (sec)</option><option>Dips</option>
+              </select>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div className="text-[8px] text-hunter-text3 uppercase mb-1">Sets</div>
+                  <input type="number" className="hunter-input" value={bwSets} onChange={e => setBwSets(Number(e.target.value))} />
+                </div>
+                <div>
+                  <div className="text-[8px] text-hunter-text3 uppercase mb-1">Reps / Sec</div>
+                  <input type="number" className="hunter-input" value={bwReps} onChange={e => setBwReps(Number(e.target.value))} />
+                </div>
               </div>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={state.gym.slice(-7).map(g => ({
-                  date: g.date.split(' ').slice(1, 3).join(' '),
-                  volume: g.sets.reduce((acc, s) => acc + (s.weight * s.reps), 0)
-                }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                  <XAxis dataKey="date" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
-                    itemStyle={{ color: '#10b981' }}
-                  />
-                  <Line type="monotone" dataKey="volume" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              <button className="hunter-btn bg-hunter-cyan text-black w-full" onClick={logBodyweight}>
+                LOG BODYWEIGHT (+10 XP)
+              </button>
+            </div>
+          </div>
+
+          <div className="hunter-card p-4 border-hunter-gold/30">
+            <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 mb-3 flex items-center gap-1.5">
+              <Footprints size={12} className="text-hunter-gold" />
+              DAILY STEPS (TREADMILL/OUTDOOR)
+            </div>
+            <div className="space-y-3">
+              <div className="relative">
+                <input 
+                  type="number" className="hunter-input pl-10" value={stepCount} 
+                  onChange={e => setStepCount(Number(e.target.value))} 
+                />
+                <Footprints className="absolute left-3 top-1/2 -translate-y-1/2 text-hunter-gold opacity-50" size={16} />
+              </div>
+              <div className="flex justify-between text-[10px]">
+                <span className="text-hunter-text3">Target: 10,000</span>
+                <span className={cn(stepCount >= 10000 ? "text-hunter-green" : "text-hunter-gold")}>
+                  {((stepCount / 10000) * 100).toFixed(0)}%
+                </span>
+              </div>
+              <button className="hunter-btn bg-hunter-gold text-black w-full" onClick={logSteps}>
+                LOG STEPS (+10 XP)
+              </button>
+            </div>
+          </div>
+
+          {state.bodyweight && state.bodyweight.length > 0 && (
+            <div className="hunter-card p-3 border-hunter-b1">
+              <div className="text-[9px] text-hunter-text3 uppercase tracking-widest mb-2">RECENT CALISTHENICS</div>
+              <div className="space-y-2">
+                {state.bodyweight.slice(-5).reverse().map(bw => (
+                  <div key={bw.id} className="flex justify-between items-center text-xs bg-hunter-s1 p-2 rounded border border-hunter-b1/50">
+                    <div>
+                      <div className="font-bold">{bw.exercise}</div>
+                      <div className="text-[10px] text-hunter-text3">{bw.date}</div>
+                    </div>
+                    <div className="text-hunter-cyan font-mono">{bw.sets} × {bw.reps}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+        </motion.div>
+      )}
 
+      {subTab === 'history' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <div className="hunter-card overflow-hidden border-hunter-b1">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -169,7 +313,7 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
                   <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest">Date</th>
                   <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest">Exercise</th>
                   <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest">Sets</th>
-                  <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest text-right">Max</th>
+                  <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -180,26 +324,22 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
                     </td>
                   </tr>
                 ) : (
-                  [...state.gym].reverse().map((g, i) => {
+                  [...state.gym].reverse().map((g) => {
                     const maxWeight = Math.max(...g.sets.map(s => s.weight));
                     return (
-                      <tr key={i} className="border-b border-hunter-b1/50 hover:bg-white/5 transition-colors">
+                      <tr key={g.id} className="border-b border-hunter-b1/50 hover:bg-white/5 transition-colors">
                         <td className="p-2 font-mono text-[9px] text-hunter-text3">{g.date.split(' ').slice(1, 3).join(' ')}</td>
                         <td className="p-2">
                           <div className="text-[11px] font-bold text-white">{g.exercise}</div>
                           <div className="text-[8px] text-hunter-cyan uppercase tracking-tighter">{g.muscle}</div>
                         </td>
                         <td className="p-2">
-                          <div className="flex gap-1 flex-wrap">
-                            {g.sets.map((s, idx) => (
-                              <span key={idx} className="text-[8px] px-1 rounded bg-hunter-b2 text-hunter-text2">
-                                {s.weight}×{s.reps}
-                              </span>
-                            ))}
-                          </div>
+                          <div className="text-[10px] text-hunter-text2">{g.sets.length} sets • {maxWeight}kg max</div>
                         </td>
-                        <td className="p-2 text-right font-mono text-[11px] font-bold text-hunter-gold">
-                          {maxWeight}kg
+                        <td className="p-2 text-right">
+                          <button onClick={() => editLog(g)} className="p-1.5 text-hunter-green hover:bg-hunter-green/10 rounded">
+                            <Edit2 size={12} />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -208,6 +348,22 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
               </tbody>
             </table>
           </div>
+          
+          {state.steps && state.steps.length > 0 && (
+            <div className="hunter-card p-3 border-hunter-gold/30">
+              <div className="text-[9px] text-hunter-text3 uppercase tracking-widest mb-2">STEP HISTORY</div>
+              <div className="space-y-1">
+                {state.steps.slice(-7).reverse().map(s => (
+                  <div key={s.id} className="flex justify-between text-xs py-1 border-b border-hunter-b1/30 last:border-0">
+                    <span className="text-hunter-text3">{s.date}</span>
+                    <span className={cn("font-mono", s.steps >= 10000 ? "text-hunter-green" : "text-hunter-gold")}>
+                      {s.steps.toLocaleString()} steps
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -235,86 +391,100 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
           })}
         </motion.div>
       )}
+
       {subTab === 'stats' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 mt-4 flex items-center gap-2">
-            <TrendingUp size={12} className="text-hunter-green" />
-            PROGRESSION ANALYSIS
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 flex items-center gap-2">
+              <TrendingUp size={12} className="text-hunter-green" />
+              PROGRESSION ANALYSIS
+            </div>
+            <select 
+              className="bg-hunter-s1 border border-hunter-b1 rounded px-2 py-1 text-[10px] text-hunter-text2 outline-none"
+              value={selectedMuscle}
+              onChange={e => setSelectedMuscle(e.target.value)}
+            >
+              {muscleGroups.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
           </div>
           
-          {state.gym.length < 2 ? (
+          {chartDataByMuscle[selectedMuscle] && chartDataByMuscle[selectedMuscle].length > 0 ? (
+            <div className="space-y-6">
+              <div className="hunter-card p-4 h-[200px] border-hunter-green/20">
+                <div className="text-[10px] text-hunter-text3 mb-4 uppercase tracking-widest flex justify-between">
+                  <span>{selectedMuscle} Group Volume</span>
+                  <span className="text-hunter-green font-bold">
+                    Total: {chartDataByMuscle[selectedMuscle].reduce((a,b) => a + b.volume, 0).toLocaleString()}kg
+                  </span>
+                </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartDataByMuscle[selectedMuscle]}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis dataKey="date" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
+                      itemStyle={{ color: '#10b981' }}
+                    />
+                    <Line type="monotone" dataKey="volume" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="space-y-4">
+                <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3">EXERCISE SPECIFIC (MAX WEIGHT)</div>
+                {Object.entries(exerciseCharts).map(([name, data]) => {
+                  const chartData = data as { date: string; weight: number }[];
+                  return (
+                    <div key={name} className="hunter-card p-4 h-[180px] border-hunter-cyan/20">
+                      <div className="text-[10px] text-hunter-text3 mb-4 uppercase tracking-widest flex justify-between">
+                        <span>{name}</span>
+                        <span className="text-hunter-cyan font-bold">PR: {Math.max(...chartData.map(d => d.weight))}kg</span>
+                      </div>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                          <XAxis dataKey="date" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
+                            itemStyle={{ color: '#22d3ee' }}
+                          />
+                          <Line type="monotone" dataKey="weight" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
             <div className="hunter-card p-8 text-center text-hunter-text3">
               <ChartIcon className="mx-auto mb-2 opacity-20" size={40} />
-              <div className="text-sm">Log at least 2 sessions to see progress</div>
+              <div className="text-sm">No data for {selectedMuscle} yet.</div>
             </div>
-          ) : (() => {
-            // Group by exercise and find the one with most logs
-            const exerciseCounts = state.gym.reduce((acc: Record<string, number>, curr) => {
-              acc[curr.exercise] = (acc[curr.exercise] || 0) + 1;
-              return acc;
-            }, {});
-            const topExercise = Object.entries(exerciseCounts).sort((a, b) => (b[1] as number) - (a[1] as number))[0][0];
-            
-            const chartData = state.gym
-              .filter(g => g.exercise === topExercise)
-              .sort((a, b) => a.ts - b.ts)
-              .map(g => ({
-                date: g.date.split(' ').slice(1, 3).join(' '),
-                weight: Math.max(...g.sets.map(s => s.weight))
-              }));
+          )}
 
-            return (
-              <div className="space-y-4">
-                <div className="hunter-card p-4 h-[250px] border-hunter-green/20">
-                  <div className="text-[10px] text-hunter-text3 mb-4 uppercase tracking-widest">
-                    Weight Progress: <span className="text-hunter-green">{topExercise}</span>
-                  </div>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="#64748b" 
-                        fontSize={10} 
-                        tickLine={false} 
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        stroke="#64748b" 
-                        fontSize={10} 
-                        tickLine={false} 
-                        axisLine={false}
-                        unit="kg"
-                      />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '10px' }}
-                        itemStyle={{ color: '#10b981' }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="weight" 
-                        stroke="#10b981" 
-                        strokeWidth={2} 
-                        dot={{ fill: '#10b981', r: 4 }} 
-                        activeDot={{ r: 6, strokeWidth: 0 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="hunter-card p-3 border-hunter-cyan/20">
-                    <div className="text-[8px] text-hunter-text3 uppercase mb-1">Total Sessions</div>
-                    <div className="text-xl font-black text-hunter-cyan">{state.gym.length}</div>
-                  </div>
-                  <div className="hunter-card p-3 border-hunter-gold/20">
-                    <div className="text-[8px] text-hunter-text3 uppercase mb-1">Unique Exercises</div>
-                    <div className="text-xl font-black text-hunter-gold">{Object.keys(exerciseCounts).length}</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+          {state.steps && state.steps.length > 0 && (
+            <div className="hunter-card p-4 h-[200px] border-hunter-gold/20">
+              <div className="text-[10px] text-hunter-text3 mb-4 uppercase tracking-widest">Step Progression</div>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={state.steps.slice(-7).map(s => ({
+                  date: s.date.split(' ').slice(1, 3).join(' '),
+                  steps: s.steps
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="date" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
+                    itemStyle={{ color: '#f5a623' }}
+                  />
+                  <Line type="monotone" dataKey="steps" stroke="#f5a623" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </motion.div>
       )}
     </div>

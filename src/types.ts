@@ -157,6 +157,22 @@ export interface Character {
   };
 }
 
+export interface BodyweightLog {
+  id: number;
+  exercise: string;
+  reps: number;
+  sets: number;
+  date: string;
+  ts: number;
+}
+
+export interface StepLog {
+  id: number;
+  steps: number;
+  date: string;
+  ts: number;
+}
+
 export interface AppState {
   activities: Activity[];
   projects: Project[];
@@ -164,6 +180,8 @@ export interface AppState {
   quests: Quest[];
   habits: Habit[];
   gym: GymLog[];
+  bodyweight: BodyweightLog[];
+  steps: StepLog[];
   investments: Investment[];
   photos: Photo[];
   metrics: Metric[];

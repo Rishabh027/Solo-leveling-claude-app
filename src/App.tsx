@@ -13,7 +13,7 @@ import {
 import { format, subDays, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { cn } from '@/src/lib/utils';
 import { 
-  Activity, Project, Task, Quest, GymLog, 
+  Activity, Project, Task, Quest, GymLog, BodyweightLog, StepLog,
   Investment, Photo, Metric, Reward, RewardHistory, 
   TimerSession, AppState 
 } from './types';
@@ -57,6 +57,8 @@ export default function App() {
       tasks: [],
       quests: [],
       gym: [],
+      bodyweight: [],
+      steps: [],
       investments: [],
       photos: [],
       metrics: [],

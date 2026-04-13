@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ClipboardList, Trash2 } from 'lucide-react';
+import { ClipboardList, Trash2, Edit2, X } from 'lucide-react';
 import { Activity, AppState } from '../types';
 import { CAT_LABELS } from '../constants';
 import { Badge, Card, SectionTitle } from './Common';
@@ -23,6 +23,34 @@ export const Daily = ({
   state, setState, subTab, setSubTab, 
   gainXP, showToast, today, todayActivities, calcHours 
 }: DailyProps) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    from: '09:00',
+    to: '10:00',
+    activity: '',
+    cat: 'deep'
+  });
+
+  const handleEdit = (act: Activity) => {
+    setEditingId(act.id);
+    setForm({
+      from: act.from,
+      to: act.to,
+      activity: act.activity,
+      cat: act.cat
+    });
+    setSubTab('log');
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setForm({
+      from: '09:00',
+      to: '10:00',
+      activity: '',
+      cat: 'deep'
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -47,29 +75,55 @@ export const Daily = ({
             <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1455391727323-7bbda5ee440a?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-xs font-black tracking-[4px] text-hunter-blue uppercase">DAILY LOGBOOK</div>
+              <div className="text-xs font-black tracking-[4px] text-hunter-blue uppercase">
+                {editingId ? 'RECALIBRATING TIMELINE' : 'DAILY LOGBOOK'}
+              </div>
             </div>
           </div>
 
           <Card variant="blue" className="p-4">
-            <SectionTitle className="mt-0">LOG HOUR BLOCK</SectionTitle>
+            <div className="flex justify-between items-center mb-4">
+              <SectionTitle className="my-0">{editingId ? 'EDIT LOG ENTRY' : 'LOG HOUR BLOCK'}</SectionTitle>
+              {editingId && (
+                <button onClick={resetForm} className="text-hunter-red text-[10px] font-bold uppercase flex items-center gap-1">
+                  <X size={12} /> Cancel
+                </button>
+              )}
+            </div>
+            
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <div className="text-[9px] text-hunter-text3 tracking-widest uppercase mb-1">From</div>
-                <input type="time" className="hunter-input" defaultValue="09:00" id="log-from" />
+                <input 
+                  type="time" className="hunter-input" 
+                  value={form.from} 
+                  onChange={e => setForm(prev => ({ ...prev, from: e.target.value }))} 
+                />
               </div>
               <div>
                 <div className="text-[9px] text-hunter-text3 tracking-widest uppercase mb-1">To</div>
-                <input type="time" className="hunter-input" defaultValue="10:00" id="log-to" />
+                <input 
+                  type="time" className="hunter-input" 
+                  value={form.to} 
+                  onChange={e => setForm(prev => ({ ...prev, to: e.target.value }))} 
+                />
               </div>
             </div>
             <div className="mb-3">
               <div className="text-[9px] text-hunter-text3 tracking-widest uppercase mb-1">Activity</div>
-              <input type="text" className="hunter-input" placeholder="What did you do?" id="log-act" />
+              <input 
+                type="text" className="hunter-input" placeholder="What did you do?" 
+                value={form.activity} 
+                onChange={e => setForm(prev => ({ ...prev, activity: e.target.value }))} 
+              />
             </div>
             <div className="mb-4">
               <div className="text-[9px] text-hunter-text3 tracking-widest uppercase mb-1">Category</div>
-              <select className="hunter-input" id="log-cat">
+              <select 
+                className="hunter-input" 
+                value={form.cat} 
+                onChange={e => setForm(prev => ({ ...prev, cat: e.target.value }))}
+              >
                 <option value="deep">⚡ Deep Work / Focus</option>
                 <option value="health">💪 Health & Fitness</option>
                 <option value="learn">📚 Learning & Study</option>
@@ -84,26 +138,31 @@ export const Daily = ({
             <button 
               className="hunter-btn bg-hunter-blue text-white w-full shadow-lg"
               onClick={() => {
-                const from = (document.getElementById('log-from') as HTMLInputElement).value;
-                const to = (document.getElementById('log-to') as HTMLInputElement).value;
-                const activity = (document.getElementById('log-act') as HTMLInputElement).value;
-                const cat = (document.getElementById('log-cat') as HTMLSelectElement).value;
-                if (!activity) return showToast('⚠ Enter an activity!', '#f43f5e');
+                if (!form.activity) return showToast('⚠ Enter an activity!', '#f43f5e');
                 
-                const newAct: Activity = {
-                  id: Math.random().toString(36).substr(2, 9),
-                  from, to, activity, cat,
-                  date: today,
-                  energy: 2,
-                  ts: Date.now()
-                };
-                setState(prev => ({ ...prev, activities: [...prev.activities, newAct] }));
-                gainXP(5, 10);
-                showToast('⚡ Activity logged!');
-                (document.getElementById('log-act') as HTMLInputElement).value = '';
+                if (editingId) {
+                  setState(prev => ({
+                    ...prev,
+                    activities: prev.activities.map(a => a.id === editingId ? { ...a, ...form } : a)
+                  }));
+                  showToast('⚡ Log updated!');
+                  resetForm();
+                } else {
+                  const newAct: Activity = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    ...form,
+                    date: today,
+                    energy: 2,
+                    ts: Date.now()
+                  };
+                  setState(prev => ({ ...prev, activities: [...prev.activities, newAct] }));
+                  gainXP(5, 10);
+                  showToast('⚡ Activity logged!');
+                  setForm(prev => ({ ...prev, activity: '' }));
+                }
               }}
             >
-              LOG (+5 XP, +10 PTS)
+              {editingId ? 'UPDATE ENTRY' : 'LOG (+5 XP, +10 PTS)'}
             </button>
           </Card>
         </motion.div>
@@ -138,12 +197,20 @@ export const Daily = ({
                     <span className="text-[10px] text-hunter-text3">{calcHours(a.from, a.to).toFixed(1)}h</span>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setState(prev => ({ ...prev, activities: prev.activities.filter(x => x.id !== a.id) }))}
-                  className="text-hunter-text3 hover:text-hunter-red"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleEdit(a)}
+                    className="text-hunter-text3 hover:text-hunter-blue"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button 
+                    onClick={() => setState(prev => ({ ...prev, activities: prev.activities.filter(x => x.id !== a.id) }))}
+                    className="text-hunter-text3 hover:text-hunter-red"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))
           )}
