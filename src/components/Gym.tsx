@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Dumbbell, Trophy, History, X, LineChart as ChartIcon, TrendingUp, Edit2, Check, Footprints, User } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { GymLog, AppState, BodyweightLog, StepLog } from '../types';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 
 interface GymProps {
   state: AppState;
@@ -358,11 +358,6 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
                   [...state.gym].reverse().map((g) => {
                     const maxWeight = Math.max(...g.sets.map(s => s.weight));
                     const isExpanded = expandedLogId === g.id;
-                    const sessionChartData = g.sets.map((s, idx) => ({
-                      name: `S${idx + 1}`,
-                      weight: s.weight,
-                      reps: s.reps
-                    }));
 
                     return (
                       <React.Fragment key={g.id}>
@@ -398,46 +393,44 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
                         {isExpanded && (
                           <tr className="bg-[#0c0c1a] border-b border-hunter-b1/50">
                             <td colSpan={4} className="p-4">
-                              <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="text-[9px] text-hunter-cyan font-bold tracking-[2px] uppercase">Session Blueprint Analysis</div>
-                                  <div className="text-[9px] text-hunter-text3 italic">Time Fragment: {g.date}</div>
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between pb-2 border-b border-hunter-b1/30">
+                                  <div className="text-[9px] text-hunter-cyan font-bold tracking-[2px] uppercase">Session Set Ledger</div>
+                                  <div className="text-[9px] text-hunter-text3 italic">{g.date}</div>
                                 </div>
                                 
-                                <div className="h-[120px] w-full">
-                                  <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={sessionChartData}>
-                                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                                      <XAxis dataKey="name" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
-                                      <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
-                                      <Tooltip 
-                                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
-                                        cursor={{ fill: '#1e293b', opacity: 0.2 }}
-                                      />
-                                      <Bar dataKey="weight" name="Weight (kg)" fill="#22d3ee" radius={[2, 2, 0, 0]} />
-                                      <Bar dataKey="reps" name="Reps" fill="#f5a623" radius={[2, 2, 0, 0]} />
-                                    </BarChart>
-                                  </ResponsiveContainer>
-                                </div>
-
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                  {g.sets.map((s, idx) => (
-                                    <div key={idx} className="bg-hunter-b2/30 border border-hunter-b1/50 rounded p-2 flex flex-col items-center">
-                                      <div className="text-[8px] text-hunter-text3 uppercase mb-1">SET {idx + 1}</div>
-                                      <div className="flex items-baseline gap-1">
-                                        <span className="text-sm font-black text-hunter-cyan">{s.weight}</span>
-                                        <span className="text-[8px] text-hunter-text3 uppercase font-bold">KG</span>
-                                        <span className="text-hunter-text3 text-[10px] mx-1">×</span>
-                                        <span className="text-sm font-black text-hunter-gold">{s.reps}</span>
-                                        <span className="text-[8px] text-hunter-text3 uppercase font-bold">RPS</span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                <div className="overflow-hidden border border-hunter-b1/50 rounded-lg">
+                                  <table className="w-full text-left text-[10px]">
+                                    <thead>
+                                      <tr className="bg-hunter-s1/50">
+                                        <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest">Set</th>
+                                        <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest">Weight</th>
+                                        <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest">Reps</th>
+                                        <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest text-right">Volume</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {g.sets.map((s, idx) => (
+                                        <tr key={idx} className="border-t border-hunter-b1/30">
+                                          <td className="p-2 text-hunter-text2 font-bold">{idx + 1}</td>
+                                          <td className="p-2 text-hunter-cyan">{s.weight} kg</td>
+                                          <td className="p-2 text-hunter-gold">{s.reps}</td>
+                                          <td className="p-2 text-right text-hunter-text3 font-mono">{(s.weight * s.reps).toLocaleString()}</td>
+                                        </tr>
+                                      ))}
+                                      <tr className="bg-hunter-s1/30 border-t border-hunter-b1">
+                                        <td colSpan={3} className="p-2 text-hunter-text3 uppercase font-bold text-[8px]">Total Session Volume</td>
+                                        <td className="p-2 text-right text-hunter-green font-black">
+                                          {g.sets.reduce((acc, s) => acc + (s.weight * s.reps), 0).toLocaleString()}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
                                 </div>
 
                                 {g.notes && (
-                                  <div className="bg-hunter-s1 p-2 rounded border border-hunter-b1/50 text-[10px] text-hunter-text2">
-                                    <span className="text-hunter-blue font-bold uppercase tracking-widest mr-2">Logs:</span>
+                                  <div className="bg-hunter-s1/20 p-2 rounded border border-hunter-b1/30 text-[10px] text-hunter-text2 italic">
+                                    <span className="text-hunter-blue font-bold uppercase tracking-widest mr-2 non-italic">Logs:</span>
                                     {g.notes}
                                   </div>
                                 )}
@@ -543,58 +536,77 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
                 <div className="text-[10px] text-hunter-text3 mb-4 uppercase tracking-widest flex justify-between">
                   <span>{selectedMuscle} Group Volume</span>
                   <span className="text-hunter-green font-bold">
-                    Evolution Analysis
+                    Atmospheric Evolution
                   </span>
                 </div>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartDataByMuscle[selectedMuscle].data}>
+                  <AreaChart data={chartDataByMuscle[selectedMuscle].data}>
+                    <defs>
+                      {chartDataByMuscle[selectedMuscle].exercises.map((ex, idx) => (
+                        <linearGradient key={`grad-${ex}`} id={`color-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={['#10b981', '#4f8ef7', '#b06ef3', '#f5a623', '#22d3ee', '#f43f5e'][idx % 6]} stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor={['#10b981', '#4f8ef7', '#b06ef3', '#f5a623', '#22d3ee', '#f43f5e'][idx % 6]} stopOpacity={0}/>
+                        </linearGradient>
+                      ))}
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                     <XAxis dataKey="date" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
                     <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
-                      cursor={{ fill: '#1e293b', opacity: 0.4 }}
+                      contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '9px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
                     />
-                    <Legend iconSize={8} wrapperStyle={{ fontSize: '8px', textTransform: 'uppercase', marginTop: '10px' }} />
+                    <Legend iconSize={8} wrapperStyle={{ fontSize: '9px', textTransform: 'uppercase', marginTop: '10px' }} />
                     {chartDataByMuscle[selectedMuscle].exercises.map((ex, idx) => (
-                      <Bar 
+                      <Area 
                         key={ex} 
+                        type="monotone"
                         dataKey={ex} 
-                        stackId="a" 
-                        fill={['#10b981', '#4f8ef7', '#b06ef3', '#f5a623', '#22d3ee', '#f43f5e'][idx % 6]} 
-                        radius={idx === chartDataByMuscle[selectedMuscle].exercises.length - 1 ? [4, 4, 0, 0] : 0}
+                        stackId="1" 
+                        stroke={['#10b981', '#4f8ef7', '#b06ef3', '#f5a623', '#22d3ee', '#f43f5e'][idx % 6]} 
+                        fillOpacity={1}
+                        fill={`url(#color-${idx})`}
                       />
                     ))}
-                  </BarChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="space-y-4">
-                <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3">EXERCISE SPECIFIC PROGRESS</div>
+                <div className="text-[9px] tracking-[3px] uppercase text-hunter-text3 px-1">TRAINING PROGRESSION ARCHIVES</div>
                   {Object.entries(exerciseCharts).map(([name, data]) => {
                     const chartData = data as { date: string; weight: number; reps: number }[];
                     return (
-                      <div key={name} className="hunter-card p-4 h-[220px] border-hunter-cyan/20">
+                      <div key={name} className="hunter-card p-4 h-[220px] border-hunter-cyan/20 bg-gradient-to-br from-bg to-[#0c0c1a]">
                         <div className="text-[10px] text-hunter-text3 mb-4 uppercase tracking-widest flex justify-between">
-                          <span>{name}</span>
+                          <span className="text-white font-bold">{name}</span>
                           <div className="flex gap-2">
-                            <span className="text-hunter-cyan font-bold">PR: {Math.max(...chartData.map(d => d.weight))}kg</span>
-                            <span className="text-hunter-gold font-bold">MAX REPS: {Math.max(...chartData.map(d => d.reps))}</span>
+                             <span className="text-hunter-cyan bg-hunter-cyan/10 px-1.5 py-0.5 rounded text-[8px] font-black border border-hunter-cyan/20">PR: {Math.max(...chartData.map(d => d.weight))}kg</span>
+                             <span className="text-hunter-gold bg-hunter-gold/10 px-1.5 py-0.5 rounded text-[8px] font-black border border-hunter-gold/20">REPS: {Math.max(...chartData.map(d => d.reps))}</span>
                           </div>
                         </div>
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                          <AreaChart data={chartData}>
+                            <defs>
+                              <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.4}/>
+                                <stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/>
+                              </linearGradient>
+                              <linearGradient id="colorReps" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#f5a623" stopOpacity={0.4}/>
+                                <stop offset="95%" stopColor="#f5a623" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} opacity={0.3} />
                             <XAxis dataKey="date" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
-                            <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                            <YAxis yAxisId="left" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                            <YAxis yAxisId="right" orientation="right" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
                             <Tooltip 
-                              contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
-                              cursor={{ fill: '#1e293b', opacity: 0.2 }}
+                              contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '9px' }}
                             />
                             <Legend wrapperStyle={{ fontSize: '8px', textTransform: 'uppercase', marginTop: '10px' }} />
-                            <Bar dataKey="weight" name="Weight (kg)" stackId="a" fill="#22d3ee" radius={0} />
-                            <Bar dataKey="reps" name="Reps" stackId="a" fill="#f5a623" radius={[4, 4, 0, 0]} />
-                          </BarChart>
+                            <Area yAxisId="left" type="monotone" dataKey="weight" name="Weight (kg)" stroke="#22d3ee" strokeWidth={2} fillOpacity={1} fill="url(#colorWeight)" />
+                            <Area yAxisId="right" type="monotone" dataKey="reps" name="Reps" stroke="#f5a623" strokeWidth={2} fillOpacity={1} fill="url(#colorReps)" />
+                          </AreaChart>
                         </ResponsiveContainer>
                       </div>
                     );
