@@ -190,6 +190,7 @@ export interface AppState {
   inventory: InventoryItem[];
   timerSessions: TimerSession[];
   unlockedCharacters: string[];
+  checkedPenaltyDates: string[];
   xp: number;
   pts: number;
   streak: number;

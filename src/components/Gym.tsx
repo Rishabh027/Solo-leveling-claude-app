@@ -33,20 +33,24 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
     setSets(prev => prev.map((s, i) => i === idx ? { ...s, [field]: val } : s));
   };
 
+  const normalizeName = (name: string) => 
+    name.trim().toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
   const logGym = () => {
     if (!exercise) return showToast('⚠ Enter exercise!', '#f43f5e');
+    const normalizedExercise = normalizeName(exercise);
     
     if (editingId) {
       setState(prev => ({
         ...prev,
-        gym: prev.gym.map(g => g.id === editingId ? { ...g, exercise, muscle, notes, sets: [...sets] } : g)
+        gym: prev.gym.map(g => g.id === editingId ? { ...g, exercise: normalizedExercise, muscle, notes, sets: [...sets] } : g)
       }));
       setEditingId(null);
       showToast('⚡ Log Updated');
     } else {
       const log: GymLog = {
         id: Date.now(),
-        exercise,
+        exercise: normalizedExercise,
         muscle,
         notes,
         sets: [...sets],
@@ -129,10 +133,11 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
       .sort((a, b) => a.ts - b.ts);
     
     logs.forEach(l => {
-      if (!exercises[l.exercise]) exercises[l.exercise] = [];
+      const name = normalizeName(l.exercise);
+      if (!exercises[name]) exercises[name] = [];
       const date = l.date.split(' ').slice(1, 3).join(' ');
       const maxWeight = Math.max(...l.sets.map(s => s.weight));
-      exercises[l.exercise].push({ date, weight: maxWeight });
+      exercises[name].push({ date, weight: maxWeight });
     });
     return exercises;
   }, [state.gym, selectedMuscle]);
@@ -371,8 +376,11 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 mt-4">PERSONAL RECORDS</div>
           {(Object.values(state.gym.reduce((acc: Record<string, GymLog>, curr: GymLog) => {
+            const name = normalizeName(curr.exercise);
             const maxWeight = Math.max(...curr.sets.map(s => s.weight));
-            if (!acc[curr.exercise] || maxWeight > Math.max(...acc[curr.exercise].sets.map(s => s.weight))) acc[curr.exercise] = curr;
+            if (!acc[name] || maxWeight > Math.max(...acc[name].sets.map(s => s.weight))) {
+              acc[name] = { ...curr, exercise: name };
+            }
             return acc;
           }, {})) as GymLog[]).map((g, i) => {
             const maxWeight = Math.max(...g.sets.map(s => s.weight));

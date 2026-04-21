@@ -133,6 +133,7 @@ export const Daily = ({
                 <option value="creative">🎨 Creative</option>
                 <option value="rest">😴 Rest & Recovery</option>
                 <option value="chores">🧹 Chores & Maintenance</option>
+                <option value="slack">🔴 Slack Off / Doomscroll</option>
               </select>
             </div>
             <button 
@@ -156,8 +157,16 @@ export const Daily = ({
                     ts: Date.now()
                   };
                   setState(prev => ({ ...prev, activities: [...prev.activities, newAct] }));
-                  gainXP(5, 10);
-                  showToast('⚡ Activity logged!');
+                  
+                  if (form.cat === 'slack') {
+                    const penaltyXP = 20;
+                    const penaltyPts = 30;
+                    gainXP(-penaltyXP, -penaltyPts);
+                    showToast(`🔴 SLACK DETECTED: -${penaltyXP} XP`, '#f43f5e');
+                  } else {
+                    gainXP(5, 10);
+                    showToast('⚡ Activity logged!');
+                  }
                   setForm(prev => ({ ...prev, activity: '' }));
                 }
               }}
@@ -186,12 +195,15 @@ export const Daily = ({
             </div>
           ) : (
             todayActivities.sort((a, b) => a.from.localeCompare(b.from)).map(a => (
-              <div key={a.id} className="flex gap-3 bg-hunter-s3 border border-hunter-b1 rounded-xl p-3 border-l-4 border-l-hunter-green">
+              <div key={a.id} className={cn(
+                "flex gap-3 bg-hunter-s3 border border-hunter-b1 rounded-xl p-3 border-l-4",
+                a.cat === 'slack' ? "border-l-hunter-red" : "border-l-hunter-green"
+              )}>
                 <div className="font-mono text-[10px] text-hunter-text3 w-16 pt-1">{a.from}–{a.to}</div>
                 <div className="flex-1">
                   <div className="text-sm font-medium">{a.activity}</div>
                   <div className="flex gap-2 mt-1">
-                    <Badge variant={a.cat === 'deep' ? 'blue' : a.cat === 'health' ? 'green' : 'purple'}>
+                    <Badge variant={a.cat === 'deep' ? 'blue' : a.cat === 'health' ? 'green' : a.cat === 'slack' ? 'red' : 'purple'}>
                       {CAT_LABELS[a.cat] || a.cat}
                     </Badge>
                     <span className="text-[10px] text-hunter-text3">{calcHours(a.from, a.to).toFixed(1)}h</span>

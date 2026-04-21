@@ -158,7 +158,8 @@ export const CAT_COLORS: Record<string, string> = {
   social: '#f43f5e',
   creative: '#e879f9',
   rest: '#3d4566',
-  chores: '#94a3b8'
+  chores: '#94a3b8',
+  slack: '#ef4444'
 };
 
 export const CAT_LABELS: Record<string, string> = {
@@ -170,5 +171,6 @@ export const CAT_LABELS: Record<string, string> = {
   social: 'Social',
   creative: 'Creative',
   rest: 'Rest',
-  chores: 'Chores'
+  chores: 'Chores',
+  slack: 'Slack Off / Doomscroll'
 };

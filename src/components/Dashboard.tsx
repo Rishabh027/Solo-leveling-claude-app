@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Zap, TrendingUp, BarChart2 } from 'lucide-react';
+import { Zap, TrendingUp, BarChart2, Info } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { format, startOfWeek, addDays, isSameDay, subDays } from 'date-fns';
 import { AppState, Rank } from '../types';
@@ -116,6 +116,15 @@ export const Dashboard = ({
         </div>
       </Card>
 
+      {totalHoursToday < 12 && (
+        <div className="bg-hunter-red/10 border border-hunter-red/30 rounded-xl p-3 flex items-center gap-3">
+          <Info className="text-hunter-red" size={20} />
+          <div className="text-[10px] text-hunter-text2">
+            Target 18h of total logs to avoid the <span className="text-hunter-red font-bold">Incomplete Logs Penalty</span>.
+          </div>
+        </div>
+      )}
+
       <SectionTitle>WEEKLY ACTIVITY LEVEL</SectionTitle>
       <Card className="p-3 h-[180px]">
         {(() => {
@@ -202,8 +211,8 @@ export const Dashboard = ({
           <div className="text-[8px] text-hunter-text3 tracking-widest uppercase">Invested</div>
         </div>
         <div className="bg-hunter-s3 border border-hunter-b1 rounded-xl p-2 text-center">
-          <div className="font-mono text-lg font-bold text-hunter-red">{state.gym.length}</div>
-          <div className="text-[8px] text-hunter-text3 tracking-widest uppercase">Gym Logs</div>
+          <div className="font-mono text-lg font-bold text-hunter-red">{new Set(state.gym.map(g => g.date)).size}</div>
+          <div className="text-[8px] text-hunter-text3 tracking-widest uppercase">Gym Visits</div>
         </div>
       </div>
 

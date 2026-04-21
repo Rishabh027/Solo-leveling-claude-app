@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { RotateCcw, Plus, Trash2, Flame, BarChart2, TrendingUp } from 'lucide-react';
+import { RotateCcw, Plus, Trash2, Flame, BarChart2, TrendingUp, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { AppState, Habit } from '../types';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { AnimatePresence } from 'motion/react';
 
 interface HabitsProps {
   state: AppState;
@@ -18,6 +19,8 @@ interface HabitsProps {
 export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubTab, gainXP, showToast }) => {
   const [newName, setNewName] = useState('');
   const [newCat, setNewCat] = useState('Mind');
+  const [loggingHabitId, setLoggingHabitId] = useState<number | null>(null);
+  const [logDetails, setLogDetails] = useState({ qty: '', time: '' });
 
   const addHabit = () => {
     if (!newName.trim()) return showToast('⚠ Enter habit name!', '#f43f5e');
@@ -36,34 +39,62 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
     setSubTab('list');
   };
 
-  const logHabit = (id: number) => {
+  const startLoggingHabit = (id: number) => {
+    const today = format(new Date(), 'EEE MMM dd yyyy');
+    const h = state.habits.find(x => x.id === id);
+    if (h?.lastDate === today) return showToast('Already done today!', '#f5a623');
+    setLoggingHabitId(id);
+    setLogDetails({ qty: '', time: '' });
+  };
+
+  const submitHabitLog = () => {
+    if (!loggingHabitId) return;
+    if (!logDetails.qty.trim() || !logDetails.time.trim()) return showToast('⚠ Provide quantitative details!', '#f43f5e');
+
     const today = format(new Date(), 'EEE MMM dd yyyy');
     const yesterday = format(new Date(Date.now() - 86400000), 'EEE MMM dd yyyy');
-    
+
     setState(prev => {
       const habits = prev.habits.map(h => {
-        if (h.id === id) {
-          if (h.lastDate === today) {
-            showToast('Already done today!', '#f5a623');
-            return h;
-          }
-          
+        if (h.id === loggingHabitId) {
           let newStreak = h.streak;
           if (h.lastDate === yesterday || h.lastDate === '') {
             newStreak += 1;
           } else {
+            // Manual break detection
+            const penaltyXP = 20;
+            gainXP(-penaltyXP, 0);
+            showToast(`⚠️ STREAK RESET: -${penaltyXP} XP`, '#f43f5e');
             newStreak = 1;
           }
           
           const newBest = Math.max(h.bestStreak, newStreak);
           gainXP(15, 10);
           showToast(`🔥 Habit Complete! Streak: ${newStreak}`, '#f5a623');
+          
           return { ...h, lastDate: today, streak: newStreak, bestStreak: newBest };
         }
         return h;
       });
-      return { ...prev, habits };
+
+      // Also log as an activity
+      const habitObj = prev.habits.find(x => x.id === loggingHabitId);
+      const activityCat = habitObj?.cat.toLowerCase() === 'body' ? 'health' : 'learn';
+      const newAct = {
+        id: Math.random().toString(36).substr(2, 9),
+        from: format(new Date(), 'HH:mm'),
+        to: format(new Date(Date.now() + 30 * 60000), 'HH:mm'), // Assume 30 min if not specific, or use user time
+        activity: `${habitObj?.name}: ${logDetails.qty} (${logDetails.time})`,
+        cat: activityCat,
+        date: today,
+        energy: 2,
+        ts: Date.now()
+      };
+
+      return { ...prev, habits, activities: [...prev.activities, newAct] };
     });
+
+    setLoggingHabitId(null);
   };
 
   const deleteHabit = (id: number) => {
@@ -128,7 +159,7 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
                   <div className="flex items-center gap-2">
                     {!doneToday ? (
                       <button 
-                        onClick={() => logHabit(h.id)}
+                        onClick={() => startLoggingHabit(h.id)}
                         className="hunter-btn btn-sm bg-hunter-green text-black px-4"
                       >
                         DONE
@@ -185,6 +216,7 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
           </div>
         </motion.div>
       )}
+
       {subTab === 'stats' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 mt-4 flex items-center gap-2">
@@ -250,6 +282,69 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
           })()}
         </motion.div>
       )}
+
+      {/* Habit Log Modal */}
+      <AnimatePresence>
+        {loggingHabitId && (
+          <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="hunter-card w-full max-w-md p-6 border-hunter-purple/50"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <div className="font-display text-lg font-black text-hunter-purple tracking-widest uppercase text-center w-full">LOGGING HABIT</div>
+              </div>
+              
+              <div className="text-center mb-6">
+                <div className="text-sm font-bold text-white mb-1">
+                  {state.habits.find(x => x.id === loggingHabitId)?.name}
+                </div>
+                <div className="text-[10px] text-hunter-text3 uppercase tracking-widest">QUANTITATIVE DATA REQUIRED</div>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                <div>
+                  <label className="text-[9px] text-hunter-text2 font-bold tracking-widest uppercase mb-1.5 block">Quantity Logged (e.g. 10 pages, 50 pushups)</label>
+                  <input 
+                    type="text" 
+                    className="hunter-input"
+                    placeholder="Enter measurement..."
+                    value={logDetails.qty}
+                    onChange={e => setLogDetails(prev => ({ ...prev, qty: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-hunter-text2 font-bold tracking-widest uppercase mb-1.5 block">Time Spent (e.g. 30 mins, 1 hour)</label>
+                  <input 
+                    type="text" 
+                    className="hunter-input"
+                    placeholder="Enter duration..."
+                    value={logDetails.time}
+                    onChange={e => setLogDetails(prev => ({ ...prev, time: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  className="hunter-btn bg-hunter-s3 text-hunter-text3 border border-hunter-b2"
+                  onClick={() => setLoggingHabitId(null)}
+                >
+                  CANCEL
+                </button>
+                <button 
+                  className="hunter-btn bg-hunter-green text-black font-bold shadow-lg shadow-hunter-green/20"
+                  onClick={submitHabitLog}
+                >
+                  SUBMIT ENTRY
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

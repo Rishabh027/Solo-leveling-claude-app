@@ -68,6 +68,7 @@ export default function App() {
       habits: [],
       timerSessions: [],
       unlockedCharacters: ['jinwoo_e'],
+      checkedPenaltyDates: [],
       xp: 0,
       pts: 0,
       streak: 0,
@@ -93,6 +94,110 @@ export default function App() {
   const [toast, setToast] = useState<{ msg: string, color: string } | null>(null);
   const [xpPop, setXpPop] = useState<{ xp: number, pts: number } | null>(null);
   const [achPop, setAchPop] = useState<{ icon: string, name: string } | null>(null);
+
+  useEffect(() => {
+    const todayStr = format(new Date(), 'EEE MMM dd yyyy');
+    const yesterdayStr = format(new Date(Date.now() - 86400000), 'EEE MMM dd yyyy');
+
+    if (state.lastDate === '') {
+      setState(prev => ({ ...prev, lastDate: todayStr, streak: 1, checkedPenaltyDates: [...(prev.checkedPenaltyDates || []), todayStr] }));
+    } else if (state.lastDate !== todayStr) {
+      const lastDate = state.lastDate;
+      const yesterdayStrForCheck = format(subDays(new Date(), 1), 'EEE MMM dd yyyy');
+      
+      // Process penalties for the date we just left (state.lastDate)
+      if (!(state.checkedPenaltyDates || []).includes(lastDate)) {
+        const lastDayActs = state.activities.filter(a => a.date === lastDate);
+        const totalHrs = lastDayActs.reduce((acc, a) => acc + calcHours(a.from, a.to), 0);
+        const productiveHrs = lastDayActs
+          .filter(a => ['deep', 'health', 'learn', 'project'].includes(a.cat))
+          .reduce((acc, a) => acc + calcHours(a.from, a.to), 0);
+
+        let penaltyXP = 0;
+        let reasons = [];
+
+        if (totalHrs < 18) {
+          penaltyXP += 50;
+          reasons.push(`INCOMPLETE LOGS (${totalHrs.toFixed(1)}/18h)`);
+        }
+        if (productiveHrs < 2) { // Minimum 2 productive hours
+          penaltyXP += 30;
+          reasons.push('UNPRODUCTIVE DAY');
+        }
+
+        if (penaltyXP > 0) {
+          penalize(penaltyXP, 0, reasons.join(' & '));
+        }
+
+        setState(prev => ({ ...prev, checkedPenaltyDates: [...(prev.checkedPenaltyDates || []), lastDate] }));
+      }
+
+      if (state.lastDate === yesterdayStr) {
+        setState(prev => ({ 
+          ...prev, 
+          lastDate: todayStr, 
+          streak: prev.streak + 1,
+          bestStreak: Math.max(prev.bestStreak, prev.streak + 1)
+        }));
+      } else {
+        // Global Streak broken
+        const lastDateObj = new Date(state.lastDate);
+        const diffTime = Math.abs(new Date().getTime() - lastDateObj.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1;
+        
+        if (diffDays > 0) {
+          const penaltyXP = 50 * diffDays;
+          const penaltyPts = 30 * diffDays;
+          penalize(penaltyXP, penaltyPts, `STREAK BROKEN (${diffDays} DAYS MISSED)`);
+          
+          // Check habits for broken streaks while away
+          let habitPenaltyXP = 0;
+          state.habits.forEach(h => {
+            if (h.streak > 0 && h.lastDate !== yesterdayStr && h.lastDate !== todayStr) {
+              habitPenaltyXP += 20;
+            }
+          });
+          
+          if (habitPenaltyXP > 0) {
+            penalize(habitPenaltyXP, 0, 'HABIT STREAKS RESET');
+          }
+
+          // Quest 10-day limit check
+          let failedQuestCount = 0;
+          state.quests.forEach(q => {
+            if (!q.done) {
+              const daysSinceCreated = (Date.now() - q.created) / (1000 * 60 * 60 * 24);
+              if (daysSinceCreated > 10) {
+                failedQuestCount++;
+              }
+            }
+          });
+
+          if (failedQuestCount > 0) {
+            const questPenaltyXP = failedQuestCount * 50;
+            penalize(questPenaltyXP, 20 * failedQuestCount, `${failedQuestCount} QUESTS EXCEEDED 10-DAY LIMIT`);
+          }
+
+          setState(prev => ({ 
+            ...prev, 
+            lastDate: todayStr, 
+            streak: 1,
+            habits: prev.habits.map(h => ({ ...h, streak: (h.lastDate === yesterdayStr || h.lastDate === todayStr) ? h.streak : 0 })),
+            quests: prev.quests.map(q => {
+              if (!q.done) {
+                const daysSinceCreated = (Date.now() - q.created) / (1000 * 60 * 60 * 24);
+                if (daysSinceCreated > 10) {
+                  // Mark as failed/reset if you want, or just continue penalizing daily
+                  // Here we just keep them but the penalty triggered
+                }
+              }
+              return q;
+            })
+          }));
+        }
+      }
+    }
+  }, []);
 
   // --- Persistence ---
   useEffect(() => {
@@ -121,22 +226,31 @@ export default function App() {
 
   const gainXP = (xp: number, pts: number) => {
     const prevRank = getRank(state.xp).r;
-    const newXp = state.xp + xp;
+    const newXp = Math.max(0, state.xp + xp);
     const newRank = getRank(newXp).r;
 
-    if (newRank !== prevRank) {
-      showToast(`🏆 RANK UP! ${RANKS.find(r => r.r === newRank)?.title.toUpperCase()}`, '#f5a623');
-      showAchPop('👑', `RANK UP → ${newRank}-RANK!`);
+    if (newXp > state.xp) {
+      if (newRank !== prevRank) {
+        showToast(`🏆 RANK UP! ${RANKS.find(r => r.r === newRank)?.title.toUpperCase()}`, '#f5a623');
+        showAchPop('👑', `RANK UP → ${newRank}-RANK!`);
+      }
+      showXpPop(xp, pts);
+    } else if (newXp < state.xp) {
+      if (newRank !== prevRank) {
+        showToast(`💥 RANK DOWN! ${RANKS.find(r => r.r === newRank)?.title.toUpperCase()}`, '#f43f5e');
+      }
     }
 
     setState(prev => ({
       ...prev,
       xp: newXp,
-      pts: prev.pts + pts
+      pts: Math.max(0, prev.pts + pts)
     }));
-    showXpPop(xp, pts);
-    checkAchievements();
-    checkCharacterUnlocks(newXp, state.pts + pts, state.tasks.filter(t => t.done).length);
+    
+    if (xp > 0) {
+      checkAchievements();
+      checkCharacterUnlocks(newXp, state.pts + pts, state.tasks.filter(t => t.done).length);
+    }
   };
 
   const checkCharacterUnlocks = useCallback((currentXp: number, currentPts: number, completedTasks: number) => {
@@ -207,6 +321,16 @@ export default function App() {
   };
 
   const totalHoursToday = todayActivities.reduce((acc, a) => acc + calcHours(a.from, a.to), 0);
+  const gymSessions = useMemo(() => new Set(state.gym.map(g => g.date)).size, [state.gym]);
+
+  const penalize = (xp: number, pts: number, reason: string) => {
+    setState(prev => ({
+      ...prev,
+      xp: Math.max(0, prev.xp - xp),
+      pts: Math.max(0, prev.pts - pts)
+    }));
+    showToast(`⚠️ PENALTY: ${reason}`, '#f43f5e');
+  };
 
   const acceptDailySystemQuest = () => {
     const todayStr = format(new Date(), 'EEE MMM dd yyyy');
@@ -346,7 +470,7 @@ export default function App() {
               { val: state.streak, lbl: '🔥', color: 'text-hunter-red' },
               { val: state.tasks.filter(t => t.done).length, lbl: 'tasks', color: 'text-hunter-green' },
               { val: state.quests.filter(q => q.done).length, lbl: 'quests', color: 'text-hunter-purple' },
-              { val: state.gym.length, lbl: 'gym', color: 'text-hunter-gold' }
+              { val: gymSessions, lbl: 'gym', color: 'text-hunter-gold' }
             ].map((c, i) => (
               <div key={i} className="flex items-center gap-1 bg-hunter-s2 border border-hunter-b2 rounded-lg px-2 py-1">
                 <span className={cn("font-mono text-xs font-bold", c.color)}>{c.val}</span>
