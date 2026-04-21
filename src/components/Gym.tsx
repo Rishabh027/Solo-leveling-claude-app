@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Dumbbell, Trophy, History, X, LineChart as ChartIcon, TrendingUp, Edit2, Check, Footprints, User } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { GymLog, AppState, BodyweightLog, StepLog } from '../types';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 
 interface GymProps {
   state: AppState;
@@ -20,6 +20,7 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
   const [notes, setNotes] = useState('');
   const [sets, setSets] = useState([{ reps: 10, weight: 60 }]);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
 
   // Bodyweight & Steps state
   const [bwExercise, setBwExercise] = useState('Push Ups');
@@ -108,23 +109,34 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
   const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core'];
   
   const chartDataByMuscle = useMemo(() => {
-    const groups: Record<string, any[]> = {};
+    const groups: Record<string, { data: any[], exercises: string[] }> = {};
     muscleGroups.forEach(m => {
       const logs = state.gym
         .filter(g => g.muscle === m)
         .sort((a, b) => a.ts - b.ts);
       
-      const dailyData: Record<string, number> = {};
+      const dailyData: Record<string, any> = {};
+      const exSet = new Set<string>();
+
       logs.forEach(l => {
         const date = l.date.split(' ').slice(1, 3).join(' ');
+        const name = normalizeName(l.exercise);
+        exSet.add(name);
+        
         const vol = l.sets.reduce((acc, s) => acc + (s.weight * s.reps), 0);
-        dailyData[date] = (dailyData[date] || 0) + vol;
+        if (!dailyData[date]) {
+          dailyData[date] = { date };
+        }
+        dailyData[date][name] = (dailyData[date][name] || 0) + vol;
       });
 
-      groups[m] = Object.entries(dailyData).map(([date, volume]) => ({ date, volume }));
+      groups[m] = {
+        data: Object.values(dailyData),
+        exercises: Array.from(exSet)
+      };
     });
     return groups;
-  }, [state.gym]);
+  }, [state.gym, muscleGroups]);
 
   const exerciseCharts = useMemo(() => {
     const exercises: Record<string, any[]> = {};
@@ -136,8 +148,22 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
       const name = normalizeName(l.exercise);
       if (!exercises[name]) exercises[name] = [];
       const date = l.date.split(' ').slice(1, 3).join(' ');
-      const maxWeight = Math.max(...l.sets.map(s => s.weight));
-      exercises[name].push({ date, weight: maxWeight });
+      
+      // Find the best set (prioritize weight then reps)
+      let bestSet = l.sets[0];
+      l.sets.forEach(s => {
+        if (s.weight > bestSet.weight) {
+          bestSet = s;
+        } else if (s.weight === bestSet.weight && s.reps > bestSet.reps) {
+          bestSet = s;
+        }
+      });
+
+      exercises[name].push({ 
+        date, 
+        weight: bestSet.weight, 
+        reps: bestSet.reps 
+      });
     });
     return exercises;
   }, [state.gym, selectedMuscle]);
@@ -331,22 +357,95 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
                 ) : (
                   [...state.gym].reverse().map((g) => {
                     const maxWeight = Math.max(...g.sets.map(s => s.weight));
+                    const isExpanded = expandedLogId === g.id;
+                    const sessionChartData = g.sets.map((s, idx) => ({
+                      name: `S${idx + 1}`,
+                      weight: s.weight,
+                      reps: s.reps
+                    }));
+
                     return (
-                      <tr key={g.id} className="border-b border-hunter-b1/50 hover:bg-white/5 transition-colors">
-                        <td className="p-2 font-mono text-[9px] text-hunter-text3">{g.date.split(' ').slice(1, 3).join(' ')}</td>
-                        <td className="p-2">
-                          <div className="text-[11px] font-bold text-white">{g.exercise}</div>
-                          <div className="text-[8px] text-hunter-cyan uppercase tracking-tighter">{g.muscle}</div>
-                        </td>
-                        <td className="p-2">
-                          <div className="text-[10px] text-hunter-text2">{g.sets.length} sets • {maxWeight}kg max</div>
-                        </td>
-                        <td className="p-2 text-right">
-                          <button onClick={() => editLog(g)} className="p-1.5 text-hunter-green hover:bg-hunter-green/10 rounded">
-                            <Edit2 size={12} />
-                          </button>
-                        </td>
-                      </tr>
+                      <React.Fragment key={g.id}>
+                        <tr 
+                          onClick={() => setExpandedLogId(isExpanded ? null : g.id)}
+                          className={cn(
+                            "border-b border-hunter-b1/50 hover:bg-white/5 transition-colors cursor-pointer",
+                            isExpanded && "bg-white/5 border-hunter-cyan/30"
+                          )}
+                        >
+                          <td className="p-2 font-mono text-[9px] text-hunter-text3">{g.date.split(' ').slice(1, 3).join(' ')}</td>
+                          <td className="p-2">
+                            <div className="text-[11px] font-bold text-white">{g.exercise}</div>
+                            <div className="text-[8px] text-hunter-cyan uppercase tracking-tighter">{g.muscle}</div>
+                          </td>
+                          <td className="p-2">
+                            <div className="text-[10px] text-hunter-text2">{g.sets.length} sets • {maxWeight}kg max</div>
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); editLog(g); }} 
+                                className="p-1.5 text-hunter-green hover:bg-hunter-green/10 rounded"
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                              <div className={cn("transition-transform duration-300", isExpanded ? "rotate-180" : "")}>
+                                <TrendingUp size={12} className="text-hunter-text3" />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-[#0c0c1a] border-b border-hunter-b1/50">
+                            <td colSpan={4} className="p-4">
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="text-[9px] text-hunter-cyan font-bold tracking-[2px] uppercase">Session Blueprint Analysis</div>
+                                  <div className="text-[9px] text-hunter-text3 italic">Time Fragment: {g.date}</div>
+                                </div>
+                                
+                                <div className="h-[120px] w-full">
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={sessionChartData}>
+                                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                                      <XAxis dataKey="name" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                                      <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                                      <Tooltip 
+                                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
+                                        cursor={{ fill: '#1e293b', opacity: 0.2 }}
+                                      />
+                                      <Bar dataKey="weight" name="Weight (kg)" fill="#22d3ee" radius={[2, 2, 0, 0]} />
+                                      <Bar dataKey="reps" name="Reps" fill="#f5a623" radius={[2, 2, 0, 0]} />
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  {g.sets.map((s, idx) => (
+                                    <div key={idx} className="bg-hunter-b2/30 border border-hunter-b1/50 rounded p-2 flex flex-col items-center">
+                                      <div className="text-[8px] text-hunter-text3 uppercase mb-1">SET {idx + 1}</div>
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="text-sm font-black text-hunter-cyan">{s.weight}</span>
+                                        <span className="text-[8px] text-hunter-text3 uppercase font-bold">KG</span>
+                                        <span className="text-hunter-text3 text-[10px] mx-1">×</span>
+                                        <span className="text-sm font-black text-hunter-gold">{s.reps}</span>
+                                        <span className="text-[8px] text-hunter-text3 uppercase font-bold">RPS</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {g.notes && (
+                                  <div className="bg-hunter-s1 p-2 rounded border border-hunter-b1/50 text-[10px] text-hunter-text2">
+                                    <span className="text-hunter-blue font-bold uppercase tracking-widest mr-2">Logs:</span>
+                                    {g.notes}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })
                 )}
@@ -377,13 +476,35 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
           <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 mt-4">PERSONAL RECORDS</div>
           {(Object.values(state.gym.reduce((acc: Record<string, GymLog>, curr: GymLog) => {
             const name = normalizeName(curr.exercise);
-            const maxWeight = Math.max(...curr.sets.map(s => s.weight));
-            if (!acc[name] || maxWeight > Math.max(...acc[name].sets.map(s => s.weight))) {
+            
+            // Find best set in current log
+            let bestSetCurr = curr.sets[0];
+            curr.sets.forEach(s => {
+              if (s.weight > bestSetCurr.weight) bestSetCurr = s;
+              else if (s.weight === bestSetCurr.weight && s.reps > bestSetCurr.reps) bestSetCurr = s;
+            });
+
+            if (!acc[name]) {
               acc[name] = { ...curr, exercise: name };
+            } else {
+              // Compare with existing best for this exercise
+              let bestSetExist = acc[name].sets[0];
+              acc[name].sets.forEach(s => {
+                if (s.weight > bestSetExist.weight) bestSetExist = s;
+                else if (s.weight === bestSetExist.weight && s.reps > bestSetExist.reps) bestSetExist = s;
+              });
+
+              if (bestSetCurr.weight > bestSetExist.weight || (bestSetCurr.weight === bestSetExist.weight && bestSetCurr.reps > bestSetExist.reps)) {
+                acc[name] = { ...curr, exercise: name };
+              }
             }
             return acc;
           }, {})) as GymLog[]).map((g, i) => {
-            const maxWeight = Math.max(...g.sets.map(s => s.weight));
+            let bestSet = g.sets[0];
+            g.sets.forEach(s => {
+              if (s.weight > bestSet.weight) bestSet = s;
+              else if (s.weight === bestSet.weight && s.reps > bestSet.reps) bestSet = s;
+            });
             return (
               <div key={i} className="hunter-card p-3 flex justify-between items-center">
                 <div>
@@ -391,8 +512,8 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
                   <div className="text-[9px] text-hunter-text3">{g.muscle} • {g.date}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-mono text-lg text-hunter-gold">{maxWeight}kg</div>
-                  <div className="text-[9px] text-hunter-text3">{g.sets.length} Sets</div>
+                  <div className="font-mono text-lg text-hunter-gold">{bestSet.weight}kg</div>
+                  <div className="text-[9px] text-hunter-text3">{bestSet.reps} Reps</div>
                 </div>
               </div>
             );
@@ -416,54 +537,68 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
             </select>
           </div>
           
-          {chartDataByMuscle[selectedMuscle] && chartDataByMuscle[selectedMuscle].length > 0 ? (
+          {chartDataByMuscle[selectedMuscle]?.data && chartDataByMuscle[selectedMuscle].data.length > 0 ? (
             <div className="space-y-6">
-              <div className="hunter-card p-4 h-[200px] border-hunter-green/20">
+              <div className="hunter-card p-4 h-[250px] border-hunter-green/20">
                 <div className="text-[10px] text-hunter-text3 mb-4 uppercase tracking-widest flex justify-between">
                   <span>{selectedMuscle} Group Volume</span>
                   <span className="text-hunter-green font-bold">
-                    Total: {chartDataByMuscle[selectedMuscle].reduce((a,b) => a + b.volume, 0).toLocaleString()}kg
+                    Evolution Analysis
                   </span>
                 </div>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartDataByMuscle[selectedMuscle]}>
+                  <BarChart data={chartDataByMuscle[selectedMuscle].data}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                     <XAxis dataKey="date" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
                     <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
-                      itemStyle={{ color: '#10b981' }}
+                      cursor={{ fill: '#1e293b', opacity: 0.4 }}
                     />
-                    <Line type="monotone" dataKey="volume" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-                  </LineChart>
+                    <Legend iconSize={8} wrapperStyle={{ fontSize: '8px', textTransform: 'uppercase', marginTop: '10px' }} />
+                    {chartDataByMuscle[selectedMuscle].exercises.map((ex, idx) => (
+                      <Bar 
+                        key={ex} 
+                        dataKey={ex} 
+                        stackId="a" 
+                        fill={['#10b981', '#4f8ef7', '#b06ef3', '#f5a623', '#22d3ee', '#f43f5e'][idx % 6]} 
+                        radius={idx === chartDataByMuscle[selectedMuscle].exercises.length - 1 ? [4, 4, 0, 0] : 0}
+                      />
+                    ))}
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="space-y-4">
-                <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3">EXERCISE SPECIFIC (MAX WEIGHT)</div>
-                {Object.entries(exerciseCharts).map(([name, data]) => {
-                  const chartData = data as { date: string; weight: number }[];
-                  return (
-                    <div key={name} className="hunter-card p-4 h-[180px] border-hunter-cyan/20">
-                      <div className="text-[10px] text-hunter-text3 mb-4 uppercase tracking-widest flex justify-between">
-                        <span>{name}</span>
-                        <span className="text-hunter-cyan font-bold">PR: {Math.max(...chartData.map(d => d.weight))}kg</span>
+                <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3">EXERCISE SPECIFIC PROGRESS</div>
+                  {Object.entries(exerciseCharts).map(([name, data]) => {
+                    const chartData = data as { date: string; weight: number; reps: number }[];
+                    return (
+                      <div key={name} className="hunter-card p-4 h-[220px] border-hunter-cyan/20">
+                        <div className="text-[10px] text-hunter-text3 mb-4 uppercase tracking-widest flex justify-between">
+                          <span>{name}</span>
+                          <div className="flex gap-2">
+                            <span className="text-hunter-cyan font-bold">PR: {Math.max(...chartData.map(d => d.weight))}kg</span>
+                            <span className="text-hunter-gold font-bold">MAX REPS: {Math.max(...chartData.map(d => d.reps))}</span>
+                          </div>
+                        </div>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                            <XAxis dataKey="date" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
+                              cursor={{ fill: '#1e293b', opacity: 0.2 }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '8px', textTransform: 'uppercase', marginTop: '10px' }} />
+                            <Bar dataKey="weight" name="Weight (kg)" stackId="a" fill="#22d3ee" radius={0} />
+                            <Bar dataKey="reps" name="Reps" stackId="a" fill="#f5a623" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
                       </div>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                          <XAxis dataKey="date" stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
-                          <YAxis stroke="#64748b" fontSize={8} tickLine={false} axisLine={false} />
-                          <Tooltip 
-                            contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '9px' }}
-                            itemStyle={{ color: '#22d3ee' }}
-                          />
-                          <Line type="monotone" dataKey="weight" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             </div>
           ) : (

@@ -368,15 +368,16 @@ export default function App() {
   };
 
   const pieData = useMemo(() => {
-    const cats: Record<string, number> = { deep: 0, health: 0, learn: 0, admin: 0, rest: 0, chores: 0 };
+    const cats: Record<string, number> = { deep: 0, health: 0, learn: 0, admin: 0, rest: 0, chores: 0, slack: 0 };
     todayActivities.forEach(a => {
       const h = calcHours(a.from, a.to);
       if (cats[a.cat] !== undefined) cats[a.cat] += h;
       else if (a.cat === 'project') cats.deep += h;
       else if (a.cat === 'social' || a.cat === 'creative') cats.learn += h;
+      else if (a.cat === 'slack') cats.slack += h;
     });
     return Object.entries(cats).filter(([_, value]) => value > 0).map(([name, value]) => ({ name, value }));
-  }, [todayActivities]);
+  }, [todayActivities, calcHours]);
 
   // --- Layout ---
 

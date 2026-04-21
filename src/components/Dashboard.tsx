@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Zap, TrendingUp, BarChart2, Info } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { format, startOfWeek, addDays, isSameDay, subDays } from 'date-fns';
 import { AppState, Rank } from '../types';
 import { SL_QUOTES, RANKS, CAT_COLORS, CAT_LABELS, SYSTEM_QUESTS_90 } from '../constants';
@@ -130,12 +130,25 @@ export const Dashboard = ({
         {(() => {
           const last7Days = Array.from({ length: 7 }).map((_, i) => {
             const date = subDays(new Date(), 6 - i);
-            const hrs = state.activities
-              .filter(a => isSameDay(new Date(a.ts), date))
+            const dayActs = state.activities.filter(a => isSameDay(new Date(a.ts), date));
+            
+            const productive = dayActs
+              .filter(a => ['deep', 'health', 'learn', 'project', 'social', 'creative'].includes(a.cat))
               .reduce((acc, a) => acc + calcHours(a.from, a.to), 0);
+            
+            const slack = dayActs
+              .filter(a => a.cat === 'slack')
+              .reduce((acc, a) => acc + calcHours(a.from, a.to), 0);
+            
+            const other = dayActs
+              .filter(a => !['deep', 'health', 'learn', 'project', 'social', 'creative', 'slack'].includes(a.cat))
+              .reduce((acc, a) => acc + calcHours(a.from, a.to), 0);
+
             return {
               name: format(date, 'EEE'),
-              hours: Number(hrs.toFixed(1))
+              productive: Number(productive.toFixed(1)),
+              slack: Number(slack.toFixed(1)),
+              other: Number(other.toFixed(1))
             };
           });
 
@@ -161,7 +174,10 @@ export const Dashboard = ({
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '10px' }}
                   cursor={{ fill: '#1e293b', opacity: 0.4 }}
                 />
-                <Bar dataKey="hours" fill="#4f8ef7" radius={[4, 4, 0, 0]} />
+                <Legend iconSize={8} wrapperStyle={{ fontSize: '9px', textTransform: 'uppercase', marginTop: '10px' }} />
+                <Bar dataKey="productive" stackId="a" fill="#10b981" name="Productive" radius={0} />
+                <Bar dataKey="other" stackId="a" fill="#3d4566" name="Other" radius={0} />
+                <Bar dataKey="slack" stackId="a" fill="#ef4444" name="Slack Off" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           );
