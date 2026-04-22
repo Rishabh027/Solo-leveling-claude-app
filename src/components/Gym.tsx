@@ -21,6 +21,7 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
   const [sets, setSets] = useState([{ reps: 10, weight: 60 }]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
+  const [historyMuscle, setHistoryMuscle] = useState('Chest');
 
   // Bodyweight & Steps state
   const [bwExercise, setBwExercise] = useState('Push Ups');
@@ -337,113 +338,152 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
 
       {subTab === 'history' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          <div className="hunter-card overflow-hidden border-hunter-b1">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-hunter-s1 border-b border-hunter-b1">
-                  <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest">Date</th>
-                  <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest">Exercise</th>
-                  <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest">Sets</th>
-                  <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.gym.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="p-8 text-center text-hunter-text3 text-xs italic">
-                      No training data found in the archives.
-                    </td>
-                  </tr>
-                ) : (
-                  [...state.gym].reverse().map((g) => {
-                    const maxWeight = Math.max(...g.sets.map(s => s.weight));
-                    const isExpanded = expandedLogId === g.id;
+          <div className="flex items-center justify-between mb-2 px-1">
+            <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 flex items-center gap-1.5">
+              <History size={12} className="text-hunter-green" />
+              ARCHIVE RECORDS
+            </div>
+            <select 
+              className="bg-hunter-s1 border border-hunter-b1 rounded px-2 py-1 text-[10px] text-hunter-text2 outline-none"
+              value={historyMuscle}
+              onChange={e => setHistoryMuscle(e.target.value)}
+            >
+              {['All', ...muscleGroups].map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
 
-                    return (
-                      <React.Fragment key={g.id}>
-                        <tr 
-                          onClick={() => setExpandedLogId(isExpanded ? null : g.id)}
-                          className={cn(
-                            "border-b border-hunter-b1/50 hover:bg-white/5 transition-colors cursor-pointer",
-                            isExpanded && "bg-white/5 border-hunter-cyan/30"
-                          )}
-                        >
-                          <td className="p-2 font-mono text-[9px] text-hunter-text3">{g.date.split(' ').slice(1, 3).join(' ')}</td>
-                          <td className="p-2">
-                            <div className="text-[11px] font-bold text-white">{g.exercise}</div>
-                            <div className="text-[8px] text-hunter-cyan uppercase tracking-tighter">{g.muscle}</div>
-                          </td>
-                          <td className="p-2">
-                            <div className="text-[10px] text-hunter-text2">{g.sets.length} sets • {maxWeight}kg max</div>
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); editLog(g); }} 
-                                className="p-1.5 text-hunter-green hover:bg-hunter-green/10 rounded"
-                              >
-                                <Edit2 size={12} />
-                              </button>
-                              <div className={cn("transition-transform duration-300", isExpanded ? "rotate-180" : "")}>
-                                <TrendingUp size={12} className="text-hunter-text3" />
-                              </div>
-                            </div>
-                          </td>
+          <div className="space-y-4">
+            {(() => {
+              const filtered = state.gym.filter(g => historyMuscle === 'All' || g.muscle === historyMuscle);
+              
+              if (filtered.length === 0) {
+                return (
+                  <div className="hunter-card p-8 text-center text-hunter-text3 text-xs italic border-hunter-b1">
+                    No records found for {historyMuscle} in the archives.
+                  </div>
+                );
+              }
+
+              // Group by exercise
+              const grouped: Record<string, typeof filtered> = {};
+              filtered.forEach(log => {
+                if (!grouped[log.exercise]) grouped[log.exercise] = [];
+                grouped[log.exercise].push(log);
+              });
+
+              return Object.entries(grouped).map(([exerciseName, logs]) => (
+                <div key={exerciseName} className="space-y-2">
+                  <div className="flex items-center gap-2 px-2">
+                    <div className="h-[1px] flex-1 bg-hunter-b1" />
+                    <span className="text-[10px] font-black tracking-[2px] uppercase text-hunter-cyan">{exerciseName}</span>
+                    <div className="h-[1px] flex-1 bg-hunter-b1" />
+                  </div>
+                  
+                  <div className="hunter-card overflow-hidden border-hunter-b1">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-hunter-s1 border-b border-hunter-b1">
+                          <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest">Date</th>
+                          <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest">Sets & Stats</th>
+                          <th className="p-2 text-[9px] font-bold text-hunter-text3 uppercase tracking-widest text-right">Actions</th>
                         </tr>
-                        {isExpanded && (
-                          <tr className="bg-[#0c0c1a] border-b border-hunter-b1/50">
-                            <td colSpan={4} className="p-4">
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between pb-2 border-b border-hunter-b1/30">
-                                  <div className="text-[9px] text-hunter-cyan font-bold tracking-[2px] uppercase">Session Set Ledger</div>
-                                  <div className="text-[9px] text-hunter-text3 italic">{g.date}</div>
-                                </div>
-                                
-                                <div className="overflow-hidden border border-hunter-b1/50 rounded-lg">
-                                  <table className="w-full text-left text-[10px]">
-                                    <thead>
-                                      <tr className="bg-hunter-s1/50">
-                                        <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest">Set</th>
-                                        <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest">Weight</th>
-                                        <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest">Reps</th>
-                                        <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest text-right">Volume</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {g.sets.map((s, idx) => (
-                                        <tr key={idx} className="border-t border-hunter-b1/30">
-                                          <td className="p-2 text-hunter-text2 font-bold">{idx + 1}</td>
-                                          <td className="p-2 text-hunter-cyan">{s.weight} kg</td>
-                                          <td className="p-2 text-hunter-gold">{s.reps}</td>
-                                          <td className="p-2 text-right text-hunter-text3 font-mono">{(s.weight * s.reps).toLocaleString()}</td>
-                                        </tr>
-                                      ))}
-                                      <tr className="bg-hunter-s1/30 border-t border-hunter-b1">
-                                        <td colSpan={3} className="p-2 text-hunter-text3 uppercase font-bold text-[8px]">Total Session Volume</td>
-                                        <td className="p-2 text-right text-hunter-green font-black">
-                                          {g.sets.reduce((acc, s) => acc + (s.weight * s.reps), 0).toLocaleString()}
-                                        </td>
-                                      </tr>
-                                    </tbody>
-                                  </table>
-                                </div>
+                      </thead>
+                      <tbody>
+                        {[...logs].sort((a, b) => b.ts - a.ts).map((g) => {
+                          const maxWeight = Math.max(...g.sets.map(s => s.weight));
+                          const totalVolume = g.sets.reduce((acc, s) => acc + (s.weight * s.reps), 0);
+                          const isExpanded = expandedLogId === g.id;
 
-                                {g.notes && (
-                                  <div className="bg-hunter-s1/20 p-2 rounded border border-hunter-b1/30 text-[10px] text-hunter-text2 italic">
-                                    <span className="text-hunter-blue font-bold uppercase tracking-widest mr-2 non-italic">Logs:</span>
-                                    {g.notes}
-                                  </div>
+                          return (
+                            <React.Fragment key={g.id}>
+                              <tr 
+                                onClick={() => setExpandedLogId(isExpanded ? null : g.id)}
+                                className={cn(
+                                  "border-b border-hunter-b1/50 hover:bg-white/5 transition-colors cursor-pointer",
+                                  isExpanded && "bg-white/5 border-hunter-cyan/30"
                                 )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                              >
+                                <td className="p-2 font-mono text-[9px] text-hunter-text3">{g.date.split(' ').slice(1, 3).join(' ')}</td>
+                                <td className="p-2">
+                                  <div className="text-[10px] text-hunter-text2">
+                                    <span className="font-bold text-white">{g.sets.length} Sets</span>
+                                    <span className="mx-1">•</span>
+                                    <span>{maxWeight}kg Max</span>
+                                    <span className="mx-1">•</span>
+                                    <span className="text-hunter-text3">{totalVolume.toLocaleString()} Vol</span>
+                                  </div>
+                                </td>
+                                <td className="p-2 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); editLog(g); }} 
+                                      className="p-1.5 text-hunter-green hover:bg-hunter-green/10 rounded"
+                                    >
+                                      <Edit2 size={12} />
+                                    </button>
+                                    <div className={cn("transition-transform duration-300", isExpanded ? "rotate-180" : "")}>
+                                      <TrendingUp size={12} className="text-hunter-text3" />
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                              {isExpanded && (
+                                <tr className="bg-[#0c0c1a] border-b border-hunter-b1/50">
+                                  <td colSpan={3} className="p-4">
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between pb-2 border-b border-hunter-b1/30">
+                                        <div className="text-[9px] text-hunter-cyan font-bold tracking-[2px] uppercase">Session Set Ledger</div>
+                                        <div className="text-[9px] text-hunter-text3 italic">{g.date}</div>
+                                      </div>
+                                      
+                                      <div className="overflow-hidden border border-hunter-b1/50 rounded-lg">
+                                        <table className="w-full text-left text-[10px]">
+                                          <thead>
+                                            <tr className="bg-hunter-s1/50">
+                                              <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest">Set</th>
+                                              <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest">Weight</th>
+                                              <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest">Reps</th>
+                                              <th className="p-2 text-hunter-text3 uppercase font-black tracking-widest text-right">Volume</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {g.sets.map((s, idx) => (
+                                              <tr key={idx} className="border-t border-hunter-b1/30">
+                                                <td className="p-2 text-hunter-text2 font-bold">{idx + 1}</td>
+                                                <td className="p-2 text-hunter-cyan">{s.weight} kg</td>
+                                                <td className="p-2 text-hunter-gold">{s.reps}</td>
+                                                <td className="p-2 text-right text-hunter-text3 font-mono">{(s.weight * s.reps).toLocaleString()}</td>
+                                              </tr>
+                                            ))}
+                                            <tr className="bg-hunter-s1/30 border-t border-hunter-b1">
+                                              <td colSpan={3} className="p-2 text-hunter-text3 uppercase font-bold text-[8px]">Total Session Volume</td>
+                                              <td className="p-2 text-right text-hunter-green font-black">
+                                                {g.sets.reduce((acc, s) => acc + (s.weight * s.reps), 0).toLocaleString()}
+                                              </td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                      </div>
+
+                                      {g.notes && (
+                                        <div className="bg-hunter-s1/20 p-2 rounded border border-hunter-b1/30 text-[10px] text-hunter-text2 italic">
+                                          <span className="text-hunter-blue font-bold uppercase tracking-widest mr-2 non-italic">Logs:</span>
+                                          {g.notes}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
           
           {state.steps && state.steps.length > 0 && (
