@@ -367,8 +367,9 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
               // Group by exercise
               const grouped: Record<string, typeof filtered> = {};
               filtered.forEach(log => {
-                if (!grouped[log.exercise]) grouped[log.exercise] = [];
-                grouped[log.exercise].push(log);
+                const normalizedKey = normalizeName(log.exercise);
+                if (!grouped[normalizedKey]) grouped[normalizedKey] = [];
+                grouped[normalizedKey].push(log);
               });
 
               return Object.entries(grouped).map(([exerciseName, logs]) => (
