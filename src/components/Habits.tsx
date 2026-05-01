@@ -20,6 +20,7 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
   const [newName, setNewName] = useState('');
   const [newCat, setNewCat] = useState('Mind');
   const [loggingHabitId, setLoggingHabitId] = useState<number | null>(null);
+  const [expandedHabitId, setExpandedHabitId] = useState<number | null>(null);
   const [logDetails, setLogDetails] = useState({ qty: '', time: '' });
 
   const addHabit = () => {
@@ -55,13 +56,22 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
     const yesterday = format(new Date(Date.now() - 86400000), 'EEE MMM dd yyyy');
 
     setState(prev => {
+      const newLog = {
+        id: Math.random().toString(36).substr(2, 9),
+        habitId: loggingHabitId,
+        qty: logDetails.qty,
+        time: logDetails.time,
+        date: today,
+        ts: Date.now()
+      };
+
       const habits = prev.habits.map(h => {
         if (h.id === loggingHabitId) {
           let newStreak = h.streak;
           if (h.lastDate === yesterday || h.lastDate === '') {
             newStreak += 1;
-          } else {
-            // Manual break detection
+          } else if (h.lastDate !== today) {
+            // Manual break detection - only if they missed a day
             const penaltyXP = 20;
             gainXP(-penaltyXP, 0);
             showToast(`⚠️ STREAK RESET: -${penaltyXP} XP`, '#f43f5e');
@@ -83,7 +93,7 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
       const newAct = {
         id: Math.random().toString(36).substr(2, 9),
         from: format(new Date(), 'HH:mm'),
-        to: format(new Date(Date.now() + 30 * 60000), 'HH:mm'), // Assume 30 min if not specific, or use user time
+        to: format(new Date(Date.now() + 30 * 60000), 'HH:mm'),
         activity: `${habitObj?.name}: ${logDetails.qty} (${logDetails.time})`,
         cat: activityCat,
         date: today,
@@ -91,7 +101,12 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
         ts: Date.now()
       };
 
-      return { ...prev, habits, activities: [...prev.activities, newAct] };
+      return { 
+        ...prev, 
+        habits, 
+        habitLogs: [...(prev.habitLogs || []), newLog],
+        activities: [...prev.activities, newAct] 
+      };
     });
 
     setLoggingHabitId(null);
@@ -121,7 +136,7 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
       </div>
 
       <div className="relative h-24 rounded-2xl overflow-hidden border border-hunter-purple/30 mb-3">
-        <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1484417894907-623942c8ee29?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
+        <img src="https://images.unsplash.com/photo-1484417894907-623942c8ee29?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
         <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-xs font-black tracking-[4px] text-hunter-purple uppercase">HABIT FORGE</div>
@@ -138,39 +153,82 @@ export const Habits: React.FC<HabitsProps> = ({ state, setState, subTab, setSubT
           ) : (
             state.habits.map(h => {
               const doneToday = h.lastDate === today;
+              const hLogs = (state.habitLogs || []).filter(l => l.habitId === h.id);
+              const totalMins = hLogs.reduce((acc, l) => {
+                const match = l.time.match(/(\d+)/);
+                return acc + (match ? parseInt(match[0]) : 0);
+              }, 0);
+              const isExpanded = expandedHabitId === h.id;
+
               return (
-                <div key={h.id} className={cn("hunter-card p-3 flex items-center gap-3", doneToday && "border-hunter-green/50 bg-hunter-green/5")}>
-                  <div className="w-12 text-center shrink-0">
-                    <div className={cn("font-display text-lg font-black", h.streak > 0 ? "text-hunter-gold" : "text-hunter-text3")}>
-                      {h.streak}🔥
+                <div key={h.id} className="space-y-1">
+                  <div 
+                    onClick={() => setExpandedHabitId(isExpanded ? null : h.id)}
+                    className={cn("hunter-card p-3 flex items-center gap-3 cursor-pointer transition-all", doneToday && "border-hunter-green/50 bg-hunter-green/5", isExpanded && "ring-1 ring-hunter-purple/30")}
+                  >
+                    <div className="w-12 text-center shrink-0">
+                      <div className={cn("font-display text-lg font-black", h.streak > 0 ? "text-hunter-gold" : "text-hunter-text3")}>
+                        {h.streak}🔥
+                      </div>
+                      <div className="text-[7px] text-hunter-text3 uppercase tracking-tighter">BEST: {h.bestStreak}</div>
                     </div>
-                    <div className="text-[7px] text-hunter-text3 uppercase tracking-tighter">BEST: {h.bestStreak}</div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={cn("text-sm font-bold truncate", doneToday ? "text-hunter-text3 line-through" : "text-white")}>
-                      {h.name}
+                    <div className="flex-1 min-w-0">
+                      <div className={cn("text-sm font-bold truncate", doneToday ? "text-hunter-text3 line-through" : "text-white")}>
+                        {h.name}
+                      </div>
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-hunter-purple/20 text-hunter-purple font-bold uppercase tracking-widest">
+                          {h.cat}
+                        </span>
+                        <span className="text-[8px] text-hunter-text3 uppercase font-bold">
+                          {hLogs.length} LOGS • {totalMins}m TOTAL
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex gap-2 mt-1">
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-hunter-purple/20 text-hunter-purple font-bold uppercase tracking-widest">
-                        {h.cat}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!doneToday ? (
-                      <button 
-                        onClick={() => startLoggingHabit(h.id)}
-                        className="hunter-btn btn-sm bg-hunter-green text-black px-4"
-                      >
-                        DONE
+                    <div className="flex items-center gap-2">
+                      {!doneToday ? (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); startLoggingHabit(h.id); }}
+                          className="hunter-btn btn-sm bg-hunter-green text-black px-4"
+                        >
+                          DONE
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-hunter-green font-bold uppercase tracking-widest">✓ DONE</span>
+                      )}
+                      <button onClick={(e) => { e.stopPropagation(); deleteHabit(h.id); }} className="text-hunter-text3 hover:text-hunter-red transition-colors">
+                        <Trash2 size={14} />
                       </button>
-                    ) : (
-                      <span className="text-[10px] text-hunter-green font-bold uppercase tracking-widest">✓ DONE</span>
-                    )}
-                    <button onClick={() => deleteHabit(h.id)} className="text-hunter-text3 hover:text-hunter-red transition-colors">
-                      <Trash2 size={14} />
-                    </button>
+                    </div>
                   </div>
+
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-hunter-s1/50 border border-t-0 border-hunter-b1 rounded-b-xl mx-2 p-3 space-y-2">
+                          <div className="text-[8px] text-hunter-text3 uppercase tracking-widest font-black mb-1">CHRONICLE OF PROGRESS</div>
+                          {hLogs.length === 0 ? (
+                            <div className="text-[10px] text-hunter-text3 italic py-2">No history logs yet...</div>
+                          ) : (
+                            hLogs.slice(-10).reverse().map(l => (
+                              <div key={l.id} className="flex justify-between items-center py-1.5 border-b border-hunter-b1/30 last:border-0 capitalize">
+                                <div>
+                                  <div className="text-[10px] text-white font-bold">{l.qty}</div>
+                                  <div className="text-[8px] text-hunter-text3 tracking-tighter">{l.date}</div>
+                                </div>
+                                <div className="text-[10px] font-mono text-hunter-cyan">{l.time}</div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })

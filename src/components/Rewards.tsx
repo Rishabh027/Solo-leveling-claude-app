@@ -117,7 +117,7 @@ export const Rewards: React.FC<RewardsProps> = ({ state, setState, subTab, setSu
       {subTab === 'store' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           <div className="relative h-24 rounded-2xl overflow-hidden border border-hunter-gold/30 mb-3">
-            <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1512428559083-a40ce12b26f0?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
+            <img src="https://images.unsplash.com/photo-1512428559083-a40ce12b26f0?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-xs font-black tracking-[4px] text-hunter-gold uppercase">TREASURE VAULT</div>
@@ -175,7 +175,7 @@ export const Rewards: React.FC<RewardsProps> = ({ state, setState, subTab, setSu
       {subTab === 'shop' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           <div className="relative h-24 rounded-2xl overflow-hidden border border-hunter-blue/30 mb-3">
-            <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
+            <img src="https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-xs font-black tracking-[4px] text-hunter-blue uppercase">SYSTEM SHOP</div>
@@ -223,7 +223,7 @@ export const Rewards: React.FC<RewardsProps> = ({ state, setState, subTab, setSu
       {subTab === 'inventory' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           <div className="relative h-24 rounded-2xl overflow-hidden border border-hunter-purple/30 mb-3">
-            <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
+            <img src="https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-xs font-black tracking-[4px] text-hunter-purple uppercase">INVENTORY</div>

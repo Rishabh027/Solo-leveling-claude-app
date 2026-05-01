@@ -77,7 +77,7 @@ export const Body: React.FC<BodyProps> = ({ state, setState, subTab, setSubTab, 
       {subTab === 'up' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <div className="relative h-24 rounded-2xl overflow-hidden border border-hunter-purple/30">
-            <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1510511459019-5dee667ff18b?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
+            <img src="https://images.unsplash.com/photo-1510511459019-5dee667ff18b?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-xs font-black tracking-[4px] text-hunter-purple uppercase">PHYSIQUE RE-EVALUATION</div>
@@ -178,7 +178,7 @@ export const Body: React.FC<BodyProps> = ({ state, setState, subTab, setSubTab, 
       {subTab === 'shadows' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <div className="relative h-24 rounded-2xl overflow-hidden border border-hunter-purple/30">
-            <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
+            <img src="https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-xs font-black tracking-[4px] text-hunter-purple uppercase">SHADOW ARMY</div>
@@ -190,18 +190,21 @@ export const Body: React.FC<BodyProps> = ({ state, setState, subTab, setSubTab, 
               const isUnlocked = state.unlockedCharacters.includes(char.id);
               return (
                 <div key={char.id} className={cn(
-                  "hunter-card p-0 overflow-hidden transition-all duration-500",
-                  isUnlocked ? "border-hunter-purple/50 opacity-100" : "border-hunter-b1 opacity-40 grayscale"
+                  "hunter-card p-0 overflow-hidden transition-all duration-500 relative group",
+                  isUnlocked ? "border-hunter-purple/50 opacity-100 shadow-[0_0_15px_rgba(168,85,247,0.2)]" : "border-hunter-b1 opacity-40 grayscale"
                 )}>
-                  <div className="relative aspect-square">
+                  <div className="relative aspect-[3/4]">
                     <img 
                       src={char.image} 
                       className={cn(
-                        "w-full h-full object-cover transition-all duration-700",
-                        isUnlocked ? "brightness-75 contrast-125 saturate-[0.8] hue-rotate-[240deg]" : "brightness-50 grayscale"
+                         "w-full h-full object-cover transition-all duration-700",
+                         isUnlocked ? "brightness-110 contrast-110 saturate-[1.2]" : "brightness-50 grayscale"
                       )} 
                       referrerPolicy="no-referrer" 
                     />
+                    {isUnlocked && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-hunter-purple/20 to-transparent pointer-events-none" />
+                    )}
                     {!isUnlocked && (
                       <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-3 text-center">
                         <div className="text-[8px] text-hunter-text3 uppercase tracking-widest mb-1">Locked</div>

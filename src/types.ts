@@ -173,12 +173,22 @@ export interface StepLog {
   ts: number;
 }
 
+export interface HabitLog {
+  id: string;
+  habitId: number;
+  qty: string;
+  time: string;
+  date: string;
+  ts: number;
+}
+
 export interface AppState {
   activities: Activity[];
   projects: Project[];
   tasks: Task[];
   quests: Quest[];
   habits: Habit[];
+  habitLogs: HabitLog[];
   gym: GymLog[];
   bodyweight: BodyweightLog[];
   steps: StepLog[];

@@ -22,6 +22,7 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
   const [editingId, setEditingId] = useState<number | null>(null);
   const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
   const [historyMuscle, setHistoryMuscle] = useState('Chest');
+  const [prMuscle, setPrMuscle] = useState('All');
 
   // Bodyweight & Steps state
   const [bwExercise, setBwExercise] = useState('Push Ups');
@@ -107,7 +108,7 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
   const [selectedMuscle, setSelectedMuscle] = useState('Chest');
 
   // Grouped charts data
-  const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core'];
+  const muscleGroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core'];
   
   const chartDataByMuscle = useMemo(() => {
     const groups: Record<string, { data: any[], exercises: string[] }> = {};
@@ -189,7 +190,7 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
       {subTab === 'log' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <div className="relative h-24 rounded-2xl overflow-hidden border border-hunter-green/30">
-            <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
+            <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-xs font-black tracking-[4px] text-hunter-green uppercase">
@@ -507,51 +508,73 @@ export const Gym: React.FC<GymProps> = ({ state, setState, subTab, setSubTab, ga
 
       {subTab === 'prs' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-          <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3 mt-4">PERSONAL RECORDS</div>
-          {(Object.values(state.gym.reduce((acc: Record<string, GymLog>, curr: GymLog) => {
-            const name = normalizeName(curr.exercise);
-            
-            // Find best set in current log
-            let bestSetCurr = curr.sets[0];
-            curr.sets.forEach(s => {
-              if (s.weight > bestSetCurr.weight) bestSetCurr = s;
-              else if (s.weight === bestSetCurr.weight && s.reps > bestSetCurr.reps) bestSetCurr = s;
-            });
-
-            if (!acc[name]) {
-              acc[name] = { ...curr, exercise: name };
-            } else {
-              // Compare with existing best for this exercise
-              let bestSetExist = acc[name].sets[0];
-              acc[name].sets.forEach(s => {
-                if (s.weight > bestSetExist.weight) bestSetExist = s;
-                else if (s.weight === bestSetExist.weight && s.reps > bestSetExist.reps) bestSetExist = s;
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-[9px] tracking-[2px] uppercase text-hunter-text3">PERSONAL RECORDS</div>
+            <select 
+              className="bg-hunter-s1 border border-hunter-b1 rounded px-2 py-1 text-[10px] text-hunter-text2 outline-none"
+              value={prMuscle}
+              onChange={e => setPrMuscle(e.target.value)}
+            >
+              {['All', ...muscleGroups].map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          {(() => {
+            const filteredGym = state.gym.filter(g => prMuscle === 'All' || g.muscle === prMuscle);
+            const prs = Object.values(filteredGym.reduce((acc: Record<string, GymLog>, curr: GymLog) => {
+              const name = normalizeName(curr.exercise);
+              
+              // Find best set in current log
+              let bestSetCurr = curr.sets[0];
+              curr.sets.forEach(s => {
+                if (s.weight > bestSetCurr.weight) bestSetCurr = s;
+                else if (s.weight === bestSetCurr.weight && s.reps > bestSetCurr.reps) bestSetCurr = s;
               });
 
-              if (bestSetCurr.weight > bestSetExist.weight || (bestSetCurr.weight === bestSetExist.weight && bestSetCurr.reps > bestSetExist.reps)) {
+              if (!acc[name]) {
                 acc[name] = { ...curr, exercise: name };
+              } else {
+                // Compare with existing best for this exercise
+                let bestSetExist = acc[name].sets[0];
+                acc[name].sets.forEach(s => {
+                  if (s.weight > bestSetExist.weight) bestSetExist = s;
+                  else if (s.weight === bestSetExist.weight && s.reps > bestSetExist.reps) bestSetExist = s;
+                });
+
+                if (bestSetCurr.weight > bestSetExist.weight || (bestSetCurr.weight === bestSetExist.weight && bestSetCurr.reps > bestSetExist.reps)) {
+                  acc[name] = { ...curr, exercise: name };
+                }
               }
+              return acc;
+            }, {})) as GymLog[];
+
+            if (prs.length === 0) {
+              return (
+                <div className="hunter-card p-8 text-center text-hunter-text3 text-xs italic border-hunter-b1">
+                  No records found in the {prMuscle === 'All' ? 'archives' : prMuscle + ' records'}.
+                </div>
+              );
             }
-            return acc;
-          }, {})) as GymLog[]).map((g, i) => {
-            let bestSet = g.sets[0];
-            g.sets.forEach(s => {
-              if (s.weight > bestSet.weight) bestSet = s;
-              else if (s.weight === bestSet.weight && s.reps > bestSet.reps) bestSet = s;
+
+            return prs.map((g, i) => {
+              let bestSet = g.sets[0];
+              g.sets.forEach(s => {
+                if (s.weight > bestSet.weight) bestSet = s;
+                else if (s.weight === bestSet.weight && s.reps > bestSet.reps) bestSet = s;
+              });
+              return (
+                <div key={i} className="hunter-card p-3 flex justify-between items-center">
+                  <div>
+                    <div className="text-sm font-bold text-white">{g.exercise}</div>
+                    <div className="text-[9px] text-hunter-text3">{g.muscle} • {g.date}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono text-lg text-hunter-gold">{bestSet.weight}kg</div>
+                    <div className="text-[9px] text-hunter-text3">{bestSet.reps} Reps</div>
+                  </div>
+                </div>
+              );
             });
-            return (
-              <div key={i} className="hunter-card p-3 flex justify-between items-center">
-                <div>
-                  <div className="text-sm font-bold text-white">{g.exercise}</div>
-                  <div className="text-[9px] text-hunter-text3">{g.muscle} • {g.date}</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-mono text-lg text-hunter-gold">{bestSet.weight}kg</div>
-                  <div className="text-[9px] text-hunter-text3">{bestSet.reps} Reps</div>
-                </div>
-              </div>
-            );
-          })}
+          })()}
         </motion.div>
       )}
 

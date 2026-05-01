@@ -36,7 +36,7 @@ export const Dashboard = ({
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       <div className="relative h-[140px] rounded-2xl overflow-hidden border border-hunter-b2 bg-gradient-to-br from-[#050520] to-[#0a0a30]">
-        <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1510511459019-5dee667ff18b?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-50" referrerPolicy="no-referrer" />
+        <img src="https://images.unsplash.com/photo-1510511459019-5dee667ff18b?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-50" referrerPolicy="no-referrer" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#050514]/90 via-[#050514]/40 to-transparent" />
         <div className="absolute inset-0 p-4 flex flex-col justify-end">
           <div className="text-xs text-hunter-text2 italic mb-1 line-clamp-2">"{quote.q}"</div>
@@ -233,7 +233,7 @@ export const Dashboard = ({
       </div>
 
       <div className="relative rounded-2xl overflow-hidden border border-hunter-b2 mt-2">
-        <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=1000&auto=format&fit=crop" className="w-full h-32 object-cover opacity-60" referrerPolicy="no-referrer" />
+        <img src="https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=1000&auto=format&fit=crop" className="w-full h-32 object-cover opacity-60" referrerPolicy="no-referrer" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050509] via-transparent to-transparent p-4 flex flex-col justify-end">
           <div className="text-xs text-hunter-text2 italic">"The moment you give up is the moment you lose."</div>
           <div className="text-[9px] text-hunter-blue tracking-[2px] uppercase mt-1">SOLO LEVELING — SYSTEM</div>

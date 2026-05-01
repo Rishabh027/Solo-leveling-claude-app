@@ -56,7 +56,7 @@ export const Invest: React.FC<InvestProps> = ({ state, setState, subTab, setSubT
       {subTab === 'add' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <div className="relative h-24 rounded-2xl overflow-hidden border border-hunter-gold/30">
-            <img src="https://images.weserv.nl/?url=https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
+            <img src="https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=1000&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-40" referrerPolicy="no-referrer" />
             <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-xs font-black tracking-[4px] text-hunter-gold uppercase">FINANCIAL DOMAIN</div>

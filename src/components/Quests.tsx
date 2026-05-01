@@ -100,17 +100,23 @@ export const Quests: React.FC<QuestsProps> = ({ state, setState, subTab, setSubT
           )}
         </div>
 
-        {q.instructions && q.instructions.length > 0 && !isDone && (
-          <ul className="mt-2 mb-3 space-y-1 ml-4 list-disc">
-            {q.instructions.map((inst, i) => (
-              <li key={i} className="text-[10px] text-hunter-text2 leading-relaxed">{inst}</li>
-            ))}
-          </ul>
+        {q.instructions && q.instructions.length > 0 && (
+          <div className="mt-2 mb-3">
+            <div className="text-[8px] text-hunter-text3 uppercase tracking-widest font-black mb-1">SYSTEM INSTRUCTIONS</div>
+            <ul className="space-y-1 ml-4 list-disc">
+              {q.instructions.map((inst, i) => (
+                <li key={i} className="text-[10px] text-hunter-text2 leading-relaxed">{inst}</li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {q.reflection && isDone && (
-          <div className="mt-2 mb-3 p-2 bg-hunter-gold/5 border-l-2 border-hunter-gold rounded-r italic text-[10px] text-white leading-relaxed">
-            "{q.reflection}"
+          <div className="mt-2 mb-3">
+            <div className="text-[8px] text-hunter-gold uppercase tracking-widest font-black mb-1">BATTLE REPORT (DATA LOG)</div>
+            <div className="p-2 bg-hunter-gold/5 border-l-2 border-hunter-gold rounded-r italic text-[10px] text-white leading-relaxed">
+              "{q.reflection}"
+            </div>
           </div>
         )}
 

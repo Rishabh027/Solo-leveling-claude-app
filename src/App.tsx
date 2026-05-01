@@ -66,6 +66,7 @@ export default function App() {
       rwHistory: [],
       inventory: [],
       habits: [],
+      habitLogs: [],
       timerSessions: [],
       unlockedCharacters: ['jinwoo_e'],
       checkedPenaltyDates: [],
@@ -137,7 +138,11 @@ export default function App() {
           ...prev, 
           lastDate: todayStr, 
           streak: prev.streak + 1,
-          bestStreak: Math.max(prev.bestStreak, prev.streak + 1)
+          bestStreak: Math.max(prev.bestStreak, prev.streak + 1),
+          habits: prev.habits.map(h => ({
+            ...h,
+            streak: (h.lastDate === yesterdayStr || h.lastDate === todayStr) ? h.streak : 0
+          }))
         }));
       } else {
         // Global Streak broken

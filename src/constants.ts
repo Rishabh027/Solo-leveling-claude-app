@@ -37,7 +37,7 @@ export const CHARACTERS: Character[] = [
   { 
     id: 'jinwoo_e', 
     name: 'Sung Jin-Woo (E-Rank)', 
-    image: 'https://images.weserv.nl/?url=https://images.alphacoders.com/134/1346297.png', 
+    image: 'https://images.weserv.nl/?url=https://static.wikia.nocookie.net/solo-leveling/images/e/e0/Jin-Woo_E-Rank.png/revision/latest', 
     rank: 'E', 
     desc: 'The world\'s weakest hunter.', 
     unlockRequirement: { xp: 0 } 
@@ -45,7 +45,7 @@ export const CHARACTERS: Character[] = [
   { 
     id: 'igris', 
     name: 'Blood-Red Commander Igris', 
-    image: 'https://images.weserv.nl/?url=https://images.alphacoders.com/134/1346303.png', 
+    image: 'https://images.weserv.nl/?url=https://static.wikia.nocookie.net/solo-leveling/images/4/47/Igris_Shadow.png/revision/latest', 
     rank: 'S', 
     desc: 'A knight of the red order.', 
     unlockRequirement: { tasks: 20, xp: 2000 } 
@@ -53,7 +53,7 @@ export const CHARACTERS: Character[] = [
   { 
     id: 'tank', 
     name: 'Tank', 
-    image: 'https://images.weserv.nl/?url=https://images.alphacoders.com/134/1346299.png', 
+    image: 'https://images.weserv.nl/?url=https://static.wikia.nocookie.net/solo-leveling/images/e/e6/Tank.png/revision/latest', 
     rank: 'A', 
     desc: 'Leader of the Ice Bears.', 
     unlockRequirement: { tasks: 40, xp: 5000 } 
@@ -61,7 +61,7 @@ export const CHARACTERS: Character[] = [
   { 
     id: 'iron', 
     name: 'Iron', 
-    image: 'https://images.weserv.nl/?url=https://images.alphacoders.com/134/1346300.png', 
+    image: 'https://images.weserv.nl/?url=https://static.wikia.nocookie.net/solo-leveling/images/d/d4/Iron.png/revision/latest', 
     rank: 'A', 
     desc: 'The shadow of Kim Chul.', 
     unlockRequirement: { tasks: 60, xp: 8000 } 
@@ -69,7 +69,7 @@ export const CHARACTERS: Character[] = [
   { 
     id: 'tusk', 
     name: 'Tusk', 
-    image: 'https://images.weserv.nl/?url=https://images.alphacoders.com/134/1346301.png', 
+    image: 'https://images.weserv.nl/?url=https://static.wikia.nocookie.net/solo-leveling/images/5/5e/Tusk.png/revision/latest', 
     rank: 'S', 
     desc: 'The High Orc Shaman.', 
     unlockRequirement: { tasks: 80, xp: 12000 } 
@@ -77,7 +77,7 @@ export const CHARACTERS: Character[] = [
   { 
     id: 'beru', 
     name: 'Beru', 
-    image: 'https://images.weserv.nl/?url=https://images.alphacoders.com/134/1346302.png', 
+    image: 'https://images.weserv.nl/?url=https://static.wikia.nocookie.net/solo-leveling/images/2/22/Beru_webtoon.png/revision/latest', 
     rank: 'S', 
     desc: 'The Ant King.', 
     unlockRequirement: { tasks: 100, xp: 15000 } 
